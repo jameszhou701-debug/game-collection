@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>🎯 弹射小怪</title>
+<style>
+:root{--bg:#0a0a12;--surface:rgba(255,255,255,0.04);--text:#f0f0f5;--accent:#f97316;--accent-dim:rgba(249,115,22,0.15);--green:#10b981;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;font-family:-apple-system,Inter,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
+body{padding:env(safe-area-inset-top,12px) 12px env(safe-area-inset-bottom,12px);display:flex;flex-direction:column;align-items:center;}
+.top-bar{width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 4px;flex-shrink:0;}
+.back-btn{display:flex;align-items:center;gap:6px;color:var(--text);opacity:0.6;text-decoration:none;font-size:14px;font-weight:600;padding:8px 12px;border-radius:12px;}
+.back-btn:active{background:var(--surface);opacity:1;}
+.game-title{font-size:20px;font-weight:800;}
+.game-title span{background:linear-gradient(135deg,#f97316,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.score-display{font-size:14px;font-weight:700;color:var(--accent);background:var(--accent-dim);padding:8px 16px;border-radius:20px;display:flex;gap:8px;align-items:center;}
+.game-container{flex:1;display:flex;align-items:center;justify-content:center;width:100%;position:relative;}
+canvas{background:#0f0f1a;border-radius:16px;border:1px solid rgba(255,255,255,0.06);max-width:100%;max-height:100%;box-shadow:0 0 40px rgba(249,115,22,0.06);}
+.ctrl-row{display:flex;gap:12px;padding:8px 0;flex-shrink:0;}
+.ctrl-btn{border:1px solid rgba(255,255,255,0.08);background:var(--surface);color:var(--text);padding:10px 24px;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;}
+.ctrl-btn:active{background:var(--accent-dim);border-color:var(--accent);}
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+.overlay.show{display:flex;}
+.overlay-title{font-size:32px;font-weight:900;background:linear-gradient(135deg,#f97316,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.overlay-score{font-size:16px;opacity:0.7;}
+.overlay-btn{background:var(--accent);color:#000;font-weight:800;padding:14px 40px;border-radius:30px;font-size:16px;border:none;cursor:pointer;}
+.overlay-btn:active{transform:scale(0.95);}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <a class="back-btn" href="../index.html">‹ 返回</a>
+  <div class="game-title"><span>🎯 弹射小怪</span></div>
+  <div class="score-display"><span>🎯 <span id="score">0</span></span><span>🎯 <span id="shots">5</span></span></div>
+</div>
+<div class="game-container"><canvas id="gameCanvas"></canvas></div>
+<div class="ctrl-row"><button class="ctrl-btn" id="resetBtn">🔄 重新瞄准</button></div>
+<div class="overlay" id="gameOver">
+  <div class="overlay-title" id="resultTitle">🎉 全清!</div>
+  <div class="overlay-score">得分: <span id="finalScore">0</span></div>
+  <button class="overlay-btn" id="restartBtn">🔄 再来一局</button>
+</div>
+
+<script>
+const canvas=document.getElementById('gameCanvas'),ctx=canvas.getContext('2d');
+const scoreEl=document.getElementById('score'),shotsEl=document.getElementById('shots');
+const finalScoreEl=document.getElementById('finalScore'),resultTitle=document.getElementById('resultTitle');
+const overlay=document.getElementById('gameOver'),restartBtn=document.getElementById('restartBtn');
+const resetBtn=document.getElementById('resetBtn');
+let W,H,gravity=600,projectile,monsters=[],walls=[],dragStart,isDragging,score,shots,level,animId,running;
+const G=300,launchPos={},blockW=30;
+
+function resize(){
+  const c=canvas.parentElement;
+  const s=Math.min(c.clientWidth-8,c.clientHeight-8,400);
+  canvas.width=canvas.height=s;W=s;H=s;
+  launchPos.x=80;launchPos.y=H-60;
+}
+
+function init(lvl){
+  resize();score=0;shots=5;level=lvl||1;running=true;isDragging=false;
+  scoreEl.textContent='0';shotsEl.textContent='5';overlay.classList.remove('show');
+  projectile=null;dragStart=null;
+  buildLevel(level);
+  if(animId)cancelAnimationFrame(animId);
+  loop(0);
+}
+
+function buildLevel(lvl){
+  monsters=[];walls=[];
+  const n=Math.min(4+lvl,10),cols=Math.min(n,6);
+  for(let i=0;i<n;i++){
+    const col=i%cols,row=Math.floor(i/cols);
+    const x=W-60-col*45,x2 = Math.random() * (W/2-40) + (i%2===0?W*0.45:W*0.55);
+    monsters.push({x:W-40-col*50,y:30+row*55,w:36,h:36,hp:1+Math.floor(lvl/3)});
+  }
+  walls.push({x:0,y:0,w:10,h:H},{x:0,y:0,w:W,h:6},{x:W-10,y:0,w:10,h:H});
+}
+
+function shoot(vx,vy){
+  if(shots<=0||!running)return;
+  projectile={x:launchPos.x,y:launchPos.y,vx:vx,vy:vy,r:8};
+  shots--;shotsEl.textContent=shots;
+}
+
+function update(dt){
+  if(!running)return;
+  if(projectile){
+    projectile.vy+=G*dt;
+    projectile.x+=projectile.vx*dt;
+    projectile.y+=projectile.vy*dt;
+    // wall bounce
+    if(projectile.x-projectile.r<10){projectile.x=10+projectile.r;projectile.vx*=-0.6;}
+    if(projectile.y-projectile.r<6){projectile.y=6+projectile.r;projectile.vy*=-0.6;}
+    if(projectile.x+projectile.r>W-10){projectile.x=W-10-projectile.r;projectile.vx*=-0.6;}
+    // hit monsters
+    for(const m of monsters){
+      if(m.hp<=0)continue;
+      const dx=projectile.x-m.x,dy=projectile.y-m.y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<projectile.r+18){
+        m.hp--;
+        if(m.hp<=0){score+=10*level;scoreEl.textContent=score;}
+        projectile.vx*=0.7;projectile.vy*=0.7;
+        break;
+      }
+    }
+    // ground or off screen
+    if(projectile.y+projectile.r>H||projectile.x<-50||projectile.x>W+50||projectile.y<-50){
+      projectile=null;
+      if(shots<=0&&monsters.some(m=>m.hp>0)){
+        running=false;finalScoreEl.textContent=score;resultTitle.textContent='💀 子弹用完了';overlay.classList.add('show');
+      }
+    }
+  }
+  if(monsters.every(m=>m.hp<=0)){
+    running=false;finalScoreEl.textContent=score;resultTitle.textContent='🎉 Level '+level+' 通过!';
+    overlay.classList.add('show');
+    restartBtn.textContent='➡ 下一关';
+  }else{
+    restartBtn.textContent='🔄 重新开始';
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0f0f1a';ctx.beginPath();ctx.roundRect(0,0,W,H,16);ctx.fill();
+  // walls
+  ctx.fillStyle='rgba(255,255,255,0.05)';
+  for(const w of walls)ctx.fillRect(w.x,w.y,w.w,w.h);
+  // monsters
+  for(const m of monsters){
+    if(m.hp<=0)continue;
+    ctx.shadowColor=m.hp>1?'#ef4444':'#f97316';ctx.shadowBlur=10;
+    ctx.fillStyle=m.hp>1?'#ef4444':'#f97316';
+    ctx.beginPath();ctx.arc(m.x,m.y,18,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    // eyes
+    ctx.fillStyle='#fff';
+    ctx.beginPath();ctx.arc(m.x-6,m.y-4,4,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(m.x+6,m.y-4,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#1a1a2e';
+    ctx.beginPath();ctx.arc(m.x-6,m.y-3,2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(m.x+6,m.y-3,2,0,Math.PI*2);ctx.fill();
+    // HP indicator
+    if(m.hp>1){
+      ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='9px sans-serif';ctx.textAlign='center';
+      ctx.fillText('❤️'.repeat(m.hp),m.x,m.y+28);
+    }
+  }
+  // slingshot base
+  ctx.strokeStyle='rgba(249,115,22,0.4)';ctx.lineWidth=4;ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(launchPos.x-12,launchPos.y+10);
+  ctx.lineTo(launchPos.x,launchPos.y);
+  ctx.lineTo(launchPos.x+12,launchPos.y+10);
+  ctx.stroke();
+  // projectile or aiming
+  if(isDragging&&dragStart){
+    const dx=launchPos.x-(canvas.width-dragStart.x),dy=launchPos.y-(canvas.height-dragStart.y);
+    // elastic band
+    ctx.strokeStyle='rgba(249,115,22,0.5)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(launchPos.x-12,launchPos.y+10);
+    ctx.lineTo(canvas.width-dragStart.x,canvas.height-dragStart.y);
+    ctx.lineTo(launchPos.x+12,launchPos.y+10);
+    ctx.stroke();
+    // projectile preview
+    ctx.shadowColor='#f97316';ctx.shadowBlur=12;
+    ctx.fillStyle='#f97316';
+    ctx.beginPath();ctx.arc(canvas.width-dragStart.x,canvas.height-dragStart.y,8,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    // trajectory prediction (dots)
+    ctx.fillStyle='rgba(249,115,22,0.15)';
+    let px=launchPos.x,py=launchPos.y,pvx=dx*5,pvy=dy*5;
+    for(let i=0;i<20;i++){
+      px+=pvx*0.05;py+=pvy*0.05;pvy+=G*0.05;
+      ctx.beginPath();ctx.arc(px,py,2,0,Math.PI*2);ctx.fill();
+    }
+  }else if(projectile){
+    ctx.shadowColor='#f97316';ctx.shadowBlur=12;
+    ctx.fillStyle='#f97316';
+    ctx.beginPath();ctx.arc(projectile.x,projectile.y,projectile.r,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+    // trail
+    ctx.fillStyle='rgba(249,115,22,0.08)';
+    ctx.beginPath();ctx.arc(projectile.x-2,projectile.y-2,6,0,Math.PI*2);ctx.fill();
+  }else{
+    // projectile at launcher
+    ctx.shadowColor='#f97316';ctx.shadowBlur=8;
+    ctx.fillStyle='#f97316';
+    ctx.beginPath();ctx.arc(launchPos.x,launchPos.y,8,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;
+  }
+  // instructions
+  ctx.fillStyle='rgba(255,255,255,0.15)';ctx.font='10px sans-serif';ctx.textAlign='center';
+  ctx.fillText('拖拽小球 → 瞄准怪物 → 松手发射',W/2,H-12);
+}
+
+canvas.addEventListener('touchstart',e=>{
+  if(!running||projectile||shots<=0)return;
+  const t=e.touches[0],r=canvas.getBoundingClientRect();
+  const tx=(t.clientX-r.left)*W/r.width,ty=(t.clientY-r.top)*H/r.height;
+  const d=Math.sqrt((tx-launchPos.x)**2+(ty-launchPos.y)**2);
+  if(d<40||d>200){isDragging=true;dragStart={x:canvas.width-tx,y:canvas.height-ty};}
+},{passive:true});
+
+canvas.addEventListener('touchmove',e=>{
+  if(!isDragging)return;e.preventDefault();
+  const t=e.touches[0],r=canvas.getBoundingClientRect();
+  const tx=(t.clientX-r.left)*W/r.width,ty=(t.clientY-r.top)*H/r.height;
+  dragStart={x:canvas.width-tx,y:canvas.height-ty};
+},{passive:false});
+
+canvas.addEventListener('touchend',e=>{
+  if(!isDragging)return;
+  isDragging=false;
+  if(dragStart){
+    const dx=launchPos.x-dragStart.x,dy=launchPos.y-dragStart.y;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist>20)shoot(dx*5,dy*5);
+  }
+  dragStart=null;
+},{passive:true});
+
+// Mouse fallback
+canvas.addEventListener('mousedown',e=>{
+  if(!running||projectile||shots<=0)return;
+  const r=canvas.getBoundingClientRect();
+  const tx=(e.clientX-r.left)*W/r.width,ty=(e.clientY-r.top)*H/r.height;
+  if(Math.sqrt((tx-launchPos.x)**2+(ty-launchPos.y)**2)<40){isDragging=true;dragStart={x:canvas.width-tx,y:canvas.height-ty};}
+});
+canvas.addEventListener('mousemove',e=>{
+  if(!isDragging)return;
+  const r=canvas.getBoundingClientRect();
+  const tx=(e.clientX-r.left)*W/r.width,ty=(e.clientY-r.top)*H/r.height;
+  dragStart={x:canvas.width-tx,y:canvas.height-ty};
+});
+canvas.addEventListener('mouseup',e=>{
+  if(!isDragging)return;isDragging=false;
+  if(dragStart){const dx=launchPos.x-dragStart.x,dy=launchPos.y-dragStart.y;if(Math.sqrt(dx*dx+dy*dy)>20)shoot(dx*5,dy*5);}
+  dragStart=null;
+});
+
+let lastT=0;
+function loop(t){
+  const dt=Math.min((t-lastT)/1000,0.05);lastT=t;
+  update(dt);draw();
+  animId=requestAnimationFrame(loop);
+}
+
+resetBtn.addEventListener('click',()=>{projectile=null;shots=5;shotsEl.textContent='5';});
+restartBtn.addEventListener('click',()=>{
+  if(monsters.every(m=>m.hp<=0))init(level+1);else init(level);
+});
+window.addEventListener('resize',()=>{resize();if(!running)draw();});
+init(1);
+</script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>🧮 数独</title>
+<style>
+:root{--bg:#0a0a12;--surface:rgba(255,255,255,0.04);--text:#f0f0f5;--accent:#14b8a6;--accent-dim:rgba(20,184,166,0.15);}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;font-family:-apple-system,Inter,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
+body{padding:env(safe-area-inset-top,12px) 12px env(safe-area-inset-bottom,12px);display:flex;flex-direction:column;align-items:center;}
+.top-bar{width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 4px;flex-shrink:0;}
+.back-btn{display:flex;align-items:center;gap:6px;color:var(--text);opacity:0.6;text-decoration:none;font-size:14px;font-weight:600;padding:8px 12px;border-radius:12px;}
+.back-btn:active{background:var(--surface);opacity:1;}
+.game-title{font-size:20px;font-weight:800;}
+.game-title span{background:linear-gradient(135deg,#14b8a6,#2dd4bf);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.timer{font-size:14px;font-weight:700;color:var(--accent);background:var(--accent-dim);padding:8px 16px;border-radius:20px;font-variant-numeric:tabular-nums;}
+.game-container{flex:1;display:flex;align-items:center;justify-content:center;width:100%;padding:4px 0;}
+canvas{background:#0f0f1a;border-radius:12px;border:1px solid rgba(255,255,255,0.06);max-width:100%;max-height:100%;}
+.num-pad{display:flex;gap:6px;padding:6px 0;flex-shrink:0;flex-wrap:wrap;justify-content:center;}
+.num-btn{width:38px;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:var(--surface);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;transition:0.1s;display:flex;align-items:center;justify-content:center;}
+.num-btn:active{background:var(--accent-dim);border-color:var(--accent);transform:scale(0.9);}
+.ctrl-row{display:flex;gap:12px;padding:4px 0;flex-shrink:0;}
+.ctrl-btn{border:1px solid rgba(255,255,255,0.08);background:var(--surface);color:var(--text);padding:8px 20px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;}
+.ctrl-btn:active{background:var(--accent-dim);border-color:var(--accent);}
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+.overlay.show{display:flex;}
+.overlay-title{font-size:32px;font-weight:900;background:linear-gradient(135deg,#14b8a6,#2dd4bf);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.overlay-score{font-size:16px;opacity:0.7;}
+.overlay-btn{background:var(--accent);color:#000;font-weight:800;padding:14px 40px;border-radius:30px;font-size:16px;border:none;cursor:pointer;}
+.overlay-btn:active{transform:scale(0.95);}
+.difficulty{display:flex;gap:8px;padding:4px 0;flex-shrink:0;justify-content:center;}
+.diff-btn{border:1px solid rgba(255,255,255,0.08);background:var(--surface);color:var(--text);padding:6px 16px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;}
+.diff-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <a class="back-btn" href="../index.html">‹ 返回</a>
+  <div class="game-title"><span>🧮 数独</span></div>
+  <div class="timer">⏱ <span id="timer">00:00</span></div>
+</div>
+<div class="difficulty" id="diffRow">
+  <button class="diff-btn active" data-diff="easy">简单</button>
+  <button class="diff-btn" data-diff="medium">中等</button>
+  <button class="diff-btn" data-diff="hard">困难</button>
+</div>
+<div class="game-container"><canvas id="gameCanvas"></canvas></div>
+<div class="num-pad" id="numPad"></div>
+<div class="ctrl-row">
+  <button class="ctrl-btn" id="eraseBtn">⌫ 擦除</button>
+  <button class="ctrl-btn" id="hintBtn">💡 提示</button>
+  <button class="ctrl-btn" id="newBtn">🔄 新局</button>
+</div>
+<div class="overlay" id="gameOver">
+  <div class="overlay-title">🎉 完成!</div>
+  <div class="overlay-score">用时: <span id="finalTime">00:00</span></div>
+  <button class="ctrl-btn" id="restartBtn" style="font-size:16px;padding:14px 40px;">🔄 再来一局</button>
+</div>
+
+<script>
+const canvas=document.getElementById('gameCanvas'),ctx=canvas.getContext('2d');
+const timerEl=document.getElementById('timer'),finalTime=document.getElementById('finalTime');
+const overlay=document.getElementById('gameOver'),restartBtn=document.getElementById('restartBtn');
+const eraseBtn=document.getElementById('eraseBtn'),hintBtn=document.getElementById('hintBtn'),newBtn=document.getElementById('newBtn');
+const numPad=document.getElementById('numPad'),diffRow=document.getElementById('diffRow');
+let board=[],solution=[],initial=[],selected={r:-1,c:-1},size,cellSize,difficulty='easy';
+let hints=3,timer=0,timerInterval;
+
+const PUZZLES={
+  easy:[[5,3,0,0,7,0,0,0,0],[6,0,0,1,9,5,0,0,0],[0,9,8,0,0,0,0,6,0],[8,0,0,0,6,0,0,0,3],[4,0,0,8,0,3,0,0,1],[7,0,0,0,2,0,0,0,6],[0,6,0,0,0,0,2,8,0],[0,0,0,4,1,9,0,0,5],[0,0,0,0,8,0,0,7,9]],
+  medium:[[0,0,0,2,6,0,7,0,1],[6,8,0,0,7,0,0,9,0],[1,9,0,0,0,4,5,0,0],[8,2,0,1,0,0,0,4,0],[0,0,4,6,0,2,9,0,0],[0,5,0,0,0,3,0,2,8],[0,0,9,3,0,0,0,7,4],[0,4,0,0,5,0,0,3,6],[7,0,3,0,1,8,0,0,0]],
+  hard:[[0,2,0,0,0,0,0,0,0],[0,0,0,6,0,0,0,0,3],[0,7,4,0,8,0,0,0,0],[0,0,0,0,0,3,0,0,2],[0,8,0,0,4,0,0,1,0],[6,0,0,5,0,0,0,0,0],[0,0,0,0,1,0,7,8,0],[5,0,0,0,0,9,0,0,0],[0,0,0,0,0,0,0,4,0]]
+};
+
+function solveSudoku(grid){
+  const g=grid.map(r=>[...r]);
+  function isValid(g,r,c,val){
+    for(let i=0;i<9;i++)if(g[r][i]===val||g[i][c]===val)return false;
+    const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;
+    for(let i=0;i<3;i++)for(let j=0;j<3;j++)if(g[br+i][bc+j]===val)return false;
+    return true;
+  }
+  function solve(g){
+    for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+      if(g[r][c]===0){
+        for(let v=1;v<=9;v++){if(isValid(g,r,c,v)){g[r][c]=v;if(solve(g))return true;g[r][c]=0;}}
+        return false;
+      }
+    }
+    return true;
+  }
+  solve(g);return g;
+}
+
+function resize(){
+  const c=canvas.parentElement;
+  const s=Math.min(c.clientWidth-8,c.clientHeight-8,360);
+  canvas.width=canvas.height=s;size=s;cellSize=s/9;
+}
+
+function init(diff){
+  difficulty=diff||difficulty;
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.toggle('active',b.dataset.diff===difficulty));
+  resize();hints=3;timer=0;timerEl.textContent='00:00';
+  if(timerInterval)clearInterval(timerInterval);
+  overlay.classList.remove('show');
+  const p=PUZZLES[difficulty];
+  board=p.map(r=>[...r]);initial=p.map(r=>[...r]);
+  solution=solveSudoku(board);
+  selected={r:-1,c:-1};
+  timerInterval=setInterval(()=>{timer++;const m=String(Math.floor(timer/60)).padStart(2,'0'),s=String(timer%60).padStart(2,'0');timerEl.textContent=m+':'+s;},1000);
+  draw();
+}
+
+function checkWin(){
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(board[r][c]!==solution[r][c])return false;
+  clearInterval(timerInterval);
+  finalTime.textContent=timerEl.textContent;
+  setTimeout(()=>overlay.classList.add('show'),400);
+  return true;
+}
+
+function placeNum(n){
+  if(selected.r<0||selected.c<0)return;
+  const r=selected.r,c=selected.c;
+  if(initial[r][c]!==0)return;
+  board[r][c]=n;draw();checkWin();
+}
+
+function erase(){
+  if(selected.r<0||selected.c<0)return;
+  const r=selected.r,c=selected.c;
+  if(initial[r][c]!==0)return;
+  board[r][c]=0;draw();
+}
+
+function hint(){
+  if(hints<=0||selected.r<0||selected.c<0)return;
+  const r=selected.r,c=selected.c;
+  if(initial[r][c]!==0)return;
+  board[r][c]=solution[r][c];hints--;draw();checkWin();
+}
+
+function draw(){
+  ctx.clearRect(0,0,size,size);
+  ctx.fillStyle='#0f0f1a';ctx.beginPath();ctx.roundRect(0,0,size,size,12);ctx.fill();
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const x=c*cellSize,y=r*cellSize;
+    if(selected.r===r&&selected.c===c)ctx.fillStyle='rgba(20,184,166,0.12)';
+    else if(selected.r>=0&&(selected.r===r||selected.c===c))ctx.fillStyle='rgba(20,184,166,0.04)';
+    else ctx.fillStyle='transparent';
+    ctx.fillRect(x,y,cellSize,cellSize);
+    const v=board[r][c];
+    if(v!==0){
+      ctx.fillStyle=initial[r][c]!==0?'rgba(255,255,255,0.9)':'#14b8a6';
+      ctx.font='bold '+(cellSize*0.5)+'px Inter,sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(v,x+cellSize/2,y+cellSize/2+1);
+    }
+  }
+  for(let i=0;i<=9;i++){
+    ctx.beginPath();
+    if(i%3===0){ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=2;}
+    else{ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;}
+    ctx.moveTo(i*cellSize,0);ctx.lineTo(i*cellSize,size);
+    ctx.moveTo(0,i*cellSize);ctx.lineTo(size,i*cellSize);ctx.stroke();
+  }
+  ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='10px sans-serif';ctx.textAlign='center';
+  ctx.fillText('💡 '+hints,size/2,size+14);
+}
+
+canvas.addEventListener('click',e=>{
+  const r=canvas.getBoundingClientRect();
+  const x=(e.clientX-r.left)*size/r.width,y=(e.clientY-r.top)*size/r.height;
+  const c=Math.floor(x/cellSize),rr=Math.floor(y/cellSize);
+  if(rr>=0&&rr<9&&c>=0&&c<9){selected={r:rr,c:c};draw();}
+});
+canvas.addEventListener('touchstart',e=>{
+  const t=e.touches[0],r=canvas.getBoundingClientRect();
+  const x=(t.clientX-r.left)*size/r.width,y=(t.clientY-r.top)*size/r.height;
+  const c=Math.floor(x/cellSize),rr=Math.floor(y/cellSize);
+  if(rr>=0&&rr<9&&c>=0&&c<9){selected={r:rr,c:c};draw();}
+},{passive:true});
+
+for(let i=1;i<=9;i++){
+  const btn=document.createElement('button');
+  btn.className='num-btn';btn.textContent=i;
+  btn.addEventListener('click',()=>placeNum(i));
+  numPad.appendChild(btn);
+}
+diffRow.querySelectorAll('.diff-btn').forEach(b=>b.addEventListener('click',()=>init(b.dataset.diff)));
+eraseBtn.addEventListener('click',erase);
+hintBtn.addEventListener('click',hint);
+newBtn.addEventListener('click',()=>init());
+restartBtn.addEventListener('click',()=>init());
+window.addEventListener('resize',()=>{resize();draw();});
+init('easy');
+</script>
+</body>
+</html>

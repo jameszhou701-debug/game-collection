@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>🏓 打砖块</title>
+<style>
+  :root { --bg:#0a0a12; --surface:rgba(255,255,255,0.04); --text:#f0f0f5; --accent:#06b6d4; --accent-dim:rgba(6,182,212,0.15); }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; font-family:-apple-system,Inter,sans-serif; background:var(--bg); color:var(--text); overflow:hidden; }
+  body { padding:env(safe-area-inset-top,12px) 12px env(safe-area-inset-bottom,12px); display:flex; flex-direction:column; align-items:center; }
+  .top-bar { width:100%; display:flex; align-items:center; justify-content:space-between; padding:8px 4px; flex-shrink:0; }
+  .back-btn { display:flex; align-items:center; gap:6px; color:var(--text); opacity:0.6; text-decoration:none; font-size:14px; font-weight:600; padding:8px 12px; border-radius:12px; }
+  .back-btn:active { background:var(--surface); opacity:1; }
+  .game-title { font-size:20px; font-weight:800; }
+  .game-title span { background:linear-gradient(135deg,#06b6d4,#22d3ee); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .score-display { font-size:14px; font-weight:700; color:var(--accent); background:var(--accent-dim); padding:8px 16px; border-radius:20px; }
+  .game-container { flex:1; display:flex; align-items:center; justify-content:center; width:100%; }
+  canvas { background:#0f0f1a; border-radius:16px; border:1px solid rgba(255,255,255,0.06); max-width:100%; max-height:100%; box-shadow:0 0 40px rgba(6,182,212,0.06); }
+  .overlay { position:fixed; inset:0; z-index:50; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
+  .overlay.show { display:flex; }
+  .overlay-title { font-size:32px; font-weight:900; background:linear-gradient(135deg,#06b6d4,#22d3ee); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .overlay-score { font-size:16px; opacity:0.7; }
+  .overlay-btn { background:var(--accent); color:#000; font-weight:800; padding:14px 40px; border-radius:30px; font-size:16px; border:none; cursor:pointer; }
+  .overlay-btn:active { transform:scale(0.95); }
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <a class="back-btn" href="../index.html">‹ 返回</a>
+  <div class="game-title"><span>🏓 打砖块</span></div>
+  <div class="score-display">🏆 <span id="score">0</span></div>
+</div>
+<div class="game-container"><canvas id="gameCanvas"></canvas></div>
+<div class="overlay" id="gameOver">
+  <div class="overlay-title" id="resultTitle">🎉 Clear!</div>
+  <div class="overlay-score">得分: <span id="finalScore">0</span></div>
+  <button class="overlay-btn" id="restartBtn">🔄 再来一局</button>
+</div>
+
+<script>
+const canvas=document.getElementById('gameCanvas'), ctx=canvas.getContext('2d');
+const scoreEl=document.getElementById('score'), finalScoreEl=document.getElementById('finalScore');
+const resultTitle=document.getElementById('resultTitle'), overlay=document.getElementById('gameOver');
+const restartBtn=document.getElementById('restartBtn');
+let W,H,pw,ph,br,bricks,score,lives,running,animId,ball,vx,vy,paddle;
+
+function resize(){
+  const c=canvas.parentElement;
+  const s=Math.min(c.clientWidth-8,c.clientHeight-8,400);
+  canvas.width=canvas.height=s; W=s; H=s;
+  pw=W*0.18; ph=10; br=6;
+}
+
+function init(){
+  resize();
+  paddle={x:W/2-pw/2,y:H-30,w:pw,h:ph};
+  ball={x:W/2,y:H-40};
+  vx=3*((Math.random()>0.5)?1:-1); vy=-4;
+  score=0; lives=3; running=true; scoreEl.textContent='0';
+  overlay.classList.remove('show');
+  buildBricks();
+  if(animId)cancelAnimationFrame(animId);
+  loop();
+}
+
+function buildBricks(){
+  bricks=[];
+  const colors=['#ef4444','#f97316','#f59e0b','#10b981','#06b6d4','#6366f1','#8b5cf6','#ec4899'];
+  const rows=5,cols=8;
+  const bw=W/(cols+1),bh=14,gap=4;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    bricks.push({
+      x:c*(bw+gap)+bw/2+gap/2,y:30+r*(bh+gap)+gap/2,
+      w:bw,h:bh,alive:true,color:colors[c%colors.length],
+      hp:r===0?2:1
+    });
+  }
+}
+
+function update(){
+  if(!running)return;
+  ball.x+=vx; ball.y+=vy;
+  if(ball.x-br<0||ball.x+br>W){vx*=-1;ball.x=Math.max(br,Math.min(W-br,ball.x));}
+  if(ball.y-br<0){vy*=-1;ball.y=br;}
+  if(ball.y+br>H){lives--;if(lives<=0){endGame();return;}resetBall();}
+  // paddle
+  if(ball.y+br>paddle.y&&ball.y-br<paddle.y+paddle.h&&ball.x>paddle.x&&ball.x<paddle.x+paddle.w){
+    const hit=(ball.x-paddle.x)/paddle.w;
+    const angle=(hit-0.5)*Math.PI*0.7;
+    const spd=Math.sqrt(vx*vx+vy*vy);
+    vx=spd*Math.sin(angle); vy=-Math.abs(spd*Math.cos(angle));
+    ball.y=paddle.y-br;
+  }
+  // bricks
+  for(const b of bricks){
+    if(!b.alive)continue;
+    if(ball.x+br>b.x-b.w/2&&ball.x-br<b.x+b.w/2&&ball.y+br>b.y-b.h/2&&ball.y-br<b.y+b.h/2){
+      b.hp--;
+      if(b.hp<=0)b.alive=false;
+      score+=10;scoreEl.textContent=score;
+      const overlapX=Math.min(ball.x+br-(b.x-b.w/2),(b.x+b.w/2)-(ball.x-br));
+      const overlapY=Math.min(ball.y+br-(b.y-b.h/2),(b.y+b.h/2)-(ball.y-br));
+      if(overlapX<overlapY)vx*=-1;else vy*=-1;
+      break;
+    }
+  }
+  if(bricks.every(b=>!b.alive)){resultTitle.textContent='🎉 Clear!';finalScoreEl.textContent=score;overlay.classList.add('show');running=false;}
+}
+
+function resetBall(){
+  ball.x=W/2;ball.y=H-40;vx=3*((Math.random()>0.5)?1:-1);vy=-4;
+}
+
+function endGame(){
+  running=false;finalScoreEl.textContent=score;resultTitle.textContent='💀 Game Over';overlay.classList.add('show');
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0f0f1a';ctx.beginPath();ctx.roundRect(0,0,W,H,16);ctx.fill();
+  // bricks
+  for(const b of bricks){
+    if(!b.alive)continue;
+    ctx.shadowColor=b.color;ctx.shadowBlur=b.hp>1?10:4;
+    ctx.fillStyle=b.color;ctx.globalAlpha=b.hp>1?1:0.7;
+    ctx.beginPath();ctx.roundRect(b.x-b.w/2,b.y-b.h/2,b.w,b.h,3);ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  ctx.shadowBlur=0;
+  // paddle
+  ctx.shadowColor='#06b6d4';ctx.shadowBlur=12;
+  ctx.fillStyle='#06b6d4';ctx.beginPath();ctx.roundRect(paddle.x,paddle.y,paddle.w,paddle.h,6);ctx.fill();
+  ctx.shadowBlur=0;
+  // ball
+  ctx.shadowColor='#22d3ee';ctx.shadowBlur=16;
+  ctx.fillStyle='#22d3ee';ctx.beginPath();ctx.arc(ball.x,ball.y,br,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+  // lives
+  ctx.font='12px sans-serif';ctx.fillStyle='rgba(255,255,255,0.4)';ctx.textAlign='left';
+  for(let i=0;i<lives;i++)ctx.fillText('❤️',10+i*22,H-8);
+}
+
+function loop(){
+  update();draw();animId=requestAnimationFrame(loop);
+}
+
+// Touch drag
+canvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  const t=e.touches[0],r=canvas.getBoundingClientRect();
+  const x=(t.clientX-r.left)*W/r.width;
+  paddle.x=Math.max(0,Math.min(W-paddle.w,x-paddle.w/2));
+},{passive:false});
+
+// Mouse
+let mouseDown=false;
+canvas.addEventListener('mousedown',()=>mouseDown=true);
+canvas.addEventListener('mousemove',e=>{
+  if(!mouseDown)return;
+  const r=canvas.getBoundingClientRect();
+  const x=(e.clientX-r.left)*W/r.width;
+  paddle.x=Math.max(0,Math.min(W-paddle.w,x-paddle.w/2));
+});
+canvas.addEventListener('mouseup',()=>mouseDown=false);
+canvas.addEventListener('mouseleave',()=>mouseDown=false);
+
+restartBtn.addEventListener('click',init);
+window.addEventListener('resize',()=>{resize();if(!running)draw();});
+init();
+</script>
+</body>
+</html>

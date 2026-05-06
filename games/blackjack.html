@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>🃏 21点</title>
+<style>
+:root{--bg:#0a0a12;--surface:rgba(255,255,255,0.04);--text:#f0f0f5;--accent:#ef4444;--accent-dim:rgba(239,68,68,0.15);--green:#10b981;--gold:#f59e0b;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;font-family:-apple-system,Inter,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
+body{padding:env(safe-area-inset-top,12px) 12px env(safe-area-inset-bottom,12px);display:flex;flex-direction:column;align-items:center;}
+.top-bar{width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 4px;flex-shrink:0;}
+.back-btn{display:flex;align-items:center;gap:6px;color:var(--text);opacity:0.6;text-decoration:none;font-size:14px;font-weight:600;padding:8px 12px;border-radius:12px;}
+.back-btn:active{background:var(--surface);opacity:1;}
+.game-title{font-size:20px;font-weight:800;}
+.game-title span{background:linear-gradient(135deg,#ef4444,#f87171);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.balance{font-size:14px;font-weight:700;color:var(--gold);background:rgba(245,158,11,0.15);padding:8px 16px;border-radius:20px;}
+.game-table{flex:1;display:flex;flex-direction:column;width:100%;max-width:400px;overflow:hidden;}
+.hand-section{flex:1;display:flex;flex-direction:column;padding:8px 0;min-height:0;}
+.hand-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.4;margin-bottom:4px;display:flex;justify-content:space-between;}
+.hand-label .val{opacity:0.7;color:var(--gold);}
+.cards-row{display:flex;gap:-4px;flex-wrap:wrap;flex:1;align-content:center;justify-content:center;min-height:60px;}
+.card{margin:0 -4px;}
+.card-inner{display:inline-flex;align-items:center;justify-content:center;width:50px;height:72px;border-radius:8px;font-weight:800;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
+.card-face{background:#fff;color:#1a1a2e;border:1px solid rgba(255,255,255,0.1);}
+.card-back{background:linear-gradient(135deg,#ef4444,#dc2626);border:1px solid rgba(239,68,68,0.3);color:#fff;font-size:10px;}
+.actions{display:flex;gap:10px;padding:8px 0;justify-content:center;flex-shrink:0;}
+.action-btn{border:none;padding:14px 32px;border-radius:30px;font-size:16px;font-weight:800;cursor:pointer;transition:0.15s;}
+.action-btn:active{transform:scale(0.95);}
+.btn-hit{background:var(--accent);color:#fff;}
+.btn-stand{background:var(--surface);color:var(--text);border:1px solid rgba(255,255,255,0.15);}
+.btn-bet{background:var(--gold);color:#000;}
+.btn-new{background:var(--green);color:#000;}
+.bet-row{display:flex;gap:8px;padding:8px 0;justify-content:center;flex-shrink:0;}
+.bet-btn{background:var(--surface);border:1px solid rgba(255,255,255,0.08);color:var(--text);padding:8px 16px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;}
+.bet-btn:active{background:rgba(245,158,11,0.2);border-color:var(--gold);}
+.msg{text-align:center;font-size:14px;font-weight:700;padding:8px;border-radius:12px;flex-shrink:0;}
+.msg.win{background:rgba(16,185,129,0.15);color:var(--green);}
+.msg.lose{background:rgba(239,68,68,0.15);color:var(--accent);}
+.msg.push{background:rgba(245,158,11,0.15);color:var(--gold);}
+.msg.blackjack{background:rgba(139,92,246,0.15);color:#8b5cf6;}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <a class="back-btn" href="../index.html">‹ 返回</a>
+  <div class="game-title"><span>🃏 21 点</span></div>
+  <div class="balance">💰 $<span id="balance">1000</span></div>
+</div>
+
+<div class="game-table">
+  <div class="hand-section">
+    <div class="hand-label">庄家 <span class="val" id="dealerVal"></span></div>
+    <div class="cards-row" id="dealerCards"></div>
+  </div>
+  <div class="hand-section">
+    <div class="hand-label">玩家 <span class="val" id="playerVal"></span></div>
+    <div class="cards-row" id="playerCards"></div>
+  </div>
+  <div id="message" class="msg" style="display:none;"></div>
+  <div class="bet-row" id="betRow">
+    <button class="bet-btn" data-bet="10">$10</button>
+    <button class="bet-btn" data-bet="25">$25</button>
+    <button class="bet-btn" data-bet="50">$50</button>
+    <button class="bet-btn" data-bet="100">$100</button>
+  </div>
+  <div class="actions" id="actionRow" style="display:none;">
+    <button class="action-btn btn-hit" id="btnHit">👆 要牌</button>
+    <button class="action-btn btn-stand" id="btnStand">✋ 停牌</button>
+  </div>
+  <div class="actions">
+    <button class="action-btn btn-bet" id="btnDouble" style="display:none;">✖2 加倍</button>
+  </div>
+</div>
+
+<script>
+const dealerCards=document.getElementById('dealerCards'),playerCards=document.getElementById('playerCards');
+const dealerVal=document.getElementById('dealerVal'),playerVal=document.getElementById('playerVal');
+const message=document.getElementById('message'),balanceEl=document.getElementById('balance');
+const betRow=document.getElementById('betRow'),actionRow=document.getElementById('actionRow');
+const btnHit=document.getElementById('btnHit'),btnStand=document.getElementById('btnStand');
+const btnDouble=document.getElementById('btnDouble');
+let deck=[],playerHand=[],dealerHand=[],balance=1000,currentBet=0,gameState='bet';
+
+function shuffle(deck){
+  for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
+  return deck;
+}
+function newDeck(){
+  const suits=['♠','♥','♦','♣'],ranks=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  deck=shuffle(suits.flatMap(s=>ranks.map(r=>({rank:r,suit:s}))));
+}
+function cardValue(rank){
+  if(rank==='A')return 11;
+  return isNaN(parseInt(rank))?10:parseInt(rank);
+}
+function handValue(hand){
+  let v=hand.reduce((s,c)=>s+cardValue(c.rank),0);
+  let aces=hand.filter(c=>c.rank==='A').length;
+  while(v>21&&aces>0){v-=10;aces--;}
+  return v;
+}
+function cardHTML(card,faceUp=true){
+  if(!faceUp)return `<div class="card"><div class="card-inner card-back">?</div></div>`;
+  const red=card.suit==='♥'||card.suit==='♦';
+  return `<div class="card"><div class="card-inner card-face" style="color:${red?'#ef4444':'#1a1a2e'}">${card.rank}${card.suit}</div></div>`;
+}
+function render(){
+  dealerCards.innerHTML=dealerHand.map((c,i)=>cardHTML(c,i===1&&gameState==='player')).join('');
+  playerCards.innerHTML=playerHand.map(c=>cardHTML(c)).join('');
+  if(gameState==='player'){
+    dealerVal.textContent=dealerHand.length?handValue([dealerHand[0]]).toString()+(dealerHand[1]?' + ?':''):'';
+  }else{
+    dealerVal.textContent=handValue(dealerHand).toString();
+  }
+  playerVal.textContent=handValue(playerHand).toString();
+  balanceEl.textContent=balance;
+}
+
+function deal(){
+  newDeck();playerHand=[deck.pop(),deck.pop()];dealerHand=[deck.pop(),deck.pop()];
+  gameState='player';message.style.display='none';betRow.style.display='none';
+  actionRow.style.display='flex';btnDouble.style.display='flex';
+  render();
+  checkBJ();
+}
+function checkBJ(){
+  if(handValue(playerHand)===21){
+    if(handValue(dealerHand)===21){showResult('push','双方都有 Blackjack！平局');return;}
+    showResult('blackjack','🃏 Blackjack! 赢得 $'+(currentBet*1.5));
+    balance+=currentBet*1.5;gameState='done';render();
+  }
+}
+function hit(){
+  if(gameState!=='player')return;
+  playerHand.push(deck.pop());render();
+  btnDouble.style.display='none';
+  if(handValue(playerHand)>21){showResult('lose','💀 爆牌了...');}
+}
+function stand(){
+  if(gameState!=='player')return;
+  gameState='dealer';
+  btnDouble.style.display='none';
+  while(handValue(dealerHand)<17)dealerHand.push(deck.pop());
+  render();
+  const pv=handValue(playerHand),dv=handValue(dealerHand);
+  if(dv>21)showResult('win','🎉 庄家爆牌！你赢了 $'+currentBet*2);
+  else if(pv>dv)showResult('win','🎉 你赢了 $'+currentBet*2);
+  else if(pv<dv)showResult('lose','💀 输了...');
+  else showResult('push','🤝 平局');
+}
+function doubleDown(){
+  if(gameState!=='player')return;
+  currentBet*=2;btnDouble.style.display='none';
+  playerHand.push(deck.pop());render();
+  if(handValue(playerHand)>21){showResult('lose','💀 爆牌了...');return;}
+  stand();
+}
+function showResult(type,msg){
+  message.className='msg '+type;message.textContent=msg;message.style.display='block';
+  gameState='done';actionRow.style.display='none';
+  if(type==='win'){balance+=currentBet*2;balanceEl.textContent=balance;}
+  setTimeout(()=>{
+    betRow.style.display='flex';
+    if(balance<=0){message.textContent='💸 破产了！重置余额';balance=1000;balanceEl.textContent=1000;}
+  },1500);
+  render();
+}
+
+document.querySelectorAll('.bet-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const amt=parseInt(b.dataset.bet);
+    if(amt>balance)return;
+    currentBet=amt;balance-=amt;deal();
+  });
+});
+btnHit.addEventListener('click',hit);
+btnStand.addEventListener('click',stand);
+btnDouble.addEventListener('click',doubleDown);
+render();
+</script>
+</body>
+</html>
