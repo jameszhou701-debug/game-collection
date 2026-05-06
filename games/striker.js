@@ -9,7 +9,8 @@ let wvData,wvIdx=0,spQ=[],spT=0,wvClr=false,wvSp=0,wvDead=0,stTimer=0;
 let animId=null;
 
 function resize(){
-  const w=gameWrap.clientWidth,hh=gameWrap.clientHeight;
+  const gw=document.getElementById('gameWrap');
+  const w=gw.clientWidth,hh=gw.clientHeight;
   W=Math.min(w,420);H=Math.min(hh,800);
   if(W/H<0.5)W=H*0.5;
   if(H/W>2.2)H=W*2.2;
