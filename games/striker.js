@@ -73,7 +73,7 @@ function se(t,x,y,dx,dy){
   ems.push(e);
 }
 
-// ── Formation spawns ──
+// ── Formation spawns (with entry path variations) ──
 function spawnLine(ty,count){
   var gap=W/(count+1);
   for(var i=0;i<count;i++)se(ty,gap*(i+1),-(20+i*5));
@@ -93,13 +93,6 @@ function spawnWedge(ty,count){
     se(ty,cx+off*32,-(20+row*25));
   }
 }
-function spawnWave(ty,count){
-  var cx=W/2;
-  for(var i=0;i<count;i++){
-    var phase=(i/count)*Math.PI*2;
-    se(ty,cx+Math.sin(phase)*W*0.4,-(20+i*18),0,0);
-  }
-}
 function spawnCarrier(ty,count){
   var cx=W/2;
   se(4,cx,-80,0,0);
@@ -107,45 +100,64 @@ function spawnCarrier(ty,count){
     se(ty,cx-40+i*20,-(60+i*5));
   }
 }
+function spawnSide(ty,count,fromRight){
+  var x=fromRight?W+30:-30;
+  for(var i=0;i<count;i++)se(ty,x,-(50+i*25),fromRight?-1.5:1.5,0);
+}
+function spawnDiagonal(ty,count,leftToRight){
+  for(var i=0;i<count;i++){
+    var x=leftToRight?-(30+i*20):W+30+i*20;
+    se(ty,x,-(30+i*30),leftToRight?1.2:-1.2,0);
+  }
+}
+function spawnZigzag(ty,count){
+  var gap=W/(count+1);
+  for(var i=0;i<count;i++){
+    var e=se(ty,gap*(i+1),-(40+i*10));
+    ems[ems.length-1].zig=true;
+    ems[ems.length-1].zamp=30+Math.random()*40;
+    ems[ems.length-1].zfreq=0.015+Math.random()*0.02;
+  }
+}
 
-// ── Spawn controller ──
+// ── Spawn controller (60% fewer enemies, gentle ramp-up, varied flight paths) ──
 function doSpawn(){
   if(wvC)return;
   spTimer++;
-  var rates=[14,13,12,11,10];
+  var rates=[40,35,28,22,18];
   var rate=rates[Math.min(stage-1,4)];
   if(spTimer>=rate){
     spTimer=0;
-    var r=Math.random();
+    var r=Math.random(),fr=Math.random()<0.5;
     if(stage===1){
-      if(r<0.3)spawnLine(1,3+Math.floor(Math.random()*3));
-      else if(r<0.55)spawnV(1,4+Math.floor(Math.random()*2));
-      else if(r<0.8)spawnV(2,2+Math.floor(Math.random()*2));
-      else spawnWedge(2,3);
+      if(r<0.4)spawnLine(1,1+Math.floor(Math.random()*2));
+      else if(r<0.7)spawnV(1,2);
+      else if(r<0.9)spawnDiagonal(1,1+Math.floor(Math.random()*2),fr);
+      else spawnZigzag(1,2+Math.floor(Math.random()*2));
     }else if(stage===2){
-      if(r<0.2)spawnLine(1,4+Math.floor(Math.random()*2));
-      else if(r<0.4)spawnV(2,3+Math.floor(Math.random()*2));
-      else if(r<0.6)spawnWedge(3,2+Math.floor(Math.random()*2));
-      else if(r<0.82)spawnWedge(4,2+Math.floor(Math.random()*2));
-      else{spawnLine(6,3+Math.floor(Math.random()*2));}
+      if(r<0.3)spawnLine(1,2+Math.floor(Math.random()*2));
+      else if(r<0.55)spawnV(2,2+Math.floor(Math.random()*2));
+      else if(r<0.75)spawnDiagonal(2,1+Math.floor(Math.random()*2),fr);
+      else if(r<0.9)spawnSide(3,2,fr);
+      else spawnZigzag(2,2+Math.floor(Math.random()*2));
     }else if(stage===3){
-      if(r<0.2)spawnV(2,4+Math.floor(Math.random()*2));
-      else if(r<0.4)spawnWedge(3,3+Math.floor(Math.random()*2));
-      else if(r<0.6)spawnV(5,2+Math.floor(Math.random()*2));
-      else if(r<0.8)spawnWedge(4,3);
-      else spawnLine(7,4+Math.floor(Math.random()*3));
+      if(r<0.25)spawnV(2,2+Math.floor(Math.random()*2));
+      else if(r<0.5)spawnWedge(3,2+Math.floor(Math.random()*2));
+      else if(r<0.7)spawnDiagonal(3,2+Math.floor(Math.random()*2),fr);
+      else if(r<0.85)spawnZigzag(4,2+Math.floor(Math.random()*2));
+      else spawnSide(4,2,fr);
     }else if(stage===4){
-      if(r<0.18)spawnWedge(3,4+Math.floor(Math.random()*3));
-      else if(r<0.38)spawnV(4,4+Math.floor(Math.random()*2));
-      else if(r<0.58)spawnWedge(5,3+Math.floor(Math.random()*2));
-      else if(r<0.78)spawnLine(6,4+Math.floor(Math.random()*2));
-      else spawnCarrier(3,3);
+      if(r<0.25)spawnWedge(3,2+Math.floor(Math.random()*3));
+      else if(r<0.45)spawnV(4,2+Math.floor(Math.random()*2));
+      else if(r<0.65)spawnDiagonal(4,2+Math.floor(Math.random()*2),fr);
+      else if(r<0.85)spawnSide(5,2,fr);
+      else spawnZigzag(5,2+Math.floor(Math.random()*2));
     }else{
-      if(r<0.15)spawnWedge(4,5+Math.floor(Math.random()*3));
-      else if(r<0.33)spawnWedge(5,4+Math.floor(Math.random()*2));
-      else if(r<0.5)spawnV(6,4+Math.floor(Math.random()*3));
-      else if(r<0.7)spawnWedge(7,5+Math.floor(Math.random()*3));
-      else spawnWedge(8,4+Math.floor(Math.random()*3));
+      if(r<0.2)spawnWedge(4,3+Math.floor(Math.random()*2));
+      else if(r<0.4)spawnV(5,2+Math.floor(Math.random()*2));
+      else if(r<0.55)spawnDiagonal(5,2+Math.floor(Math.random()*2),fr);
+      else if(r<0.75)spawnSide(6,2,fr);
+      else spawnZigzag(8,2+Math.floor(Math.random()*2));
     }
   }
   enKilled=Math.floor(score/10);
@@ -165,25 +177,25 @@ function uB(){
   var hw=boss.w*0.4;
   if(boss.x-hw<5||boss.x+hw>W-5)boss.vx*=-1;
   boss.at++;boss.ph++;
-  var rate=Math.max(4,70-stage*10);
+  var rate=Math.max(12,90-stage*10);
   if(boss.at>rate){
     boss.at=0;
     var bx=boss.x,by=boss.y+boss.h*0.3;
     var r2=Math.random();
     if(r2<0.3){
-      for(var i=-2;i<=2;i++)bls.push({x:bx,y:by,w:8,h:8,vx:i*1.5*SC,vy:4*SC,al:true,en:true,c:'#ff4080'});
+      for(var i=-1;i<=1;i++)bls.push({x:bx,y:by,w:8,h:8,vx:i*1.5*SC,vy:3*SC,al:true,en:true,c:'#ff4080'});
     }else if(r2<0.6&&pl){
       var ang=Math.atan2(pl.y-by,pl.x-bx);
-      for(var i=-3;i<=3;i++){
-        var a2=ang+i*0.25;
-        bls.push({x:bx,y:by,w:7,h:7,vx:Math.cos(a2)*3*SC,vy:Math.sin(a2)*3*SC,al:true,en:true,c:'#ff80c0'});
+      for(var i=-1;i<=1;i++){
+        var a2=ang+i*0.3;
+        bls.push({x:bx,y:by,w:7,h:7,vx:Math.cos(a2)*2.5*SC,vy:Math.sin(a2)*2.5*SC,al:true,en:true,c:'#ff80c0'});
       }
     }else if(r2<0.85){
-      for(var i=0;i<8;i++)bls.push({x:bx+Math.cos(i*0.785)*40*SC,y:by+Math.sin(i*0.785)*40*SC,w:6,h:6,
-        vx:Math.cos(i*0.785)*2.5*SC,vy:Math.sin(i*0.785)*2.5*SC+1*SC,al:true,en:true,c:'#ff4080'});
+      for(var i=0;i<5;i++)bls.push({x:bx+Math.cos(i*1.256)*35*SC,y:by+Math.sin(i*1.256)*35*SC,w:6,h:6,
+        vx:Math.cos(i*1.256)*2*SC,vy:Math.sin(i*1.256)*2*SC+1*SC,al:true,en:true,c:'#ff4080'});
     }else{
-      for(var i=0;i<15;i++)bls.push({x:boss.x+Math.random()*boss.w-boss.w/2,y:boss.y,w:5,h:5,
-        vx:(Math.random()-0.5)*4*SC,vy:Math.random()*5*SC,al:true,en:true,c:'#ff80ff'});
+      for(var i=0;i<8;i++)bls.push({x:boss.x+Math.random()*boss.w-boss.w/2,y:boss.y,w:5,h:5,
+        vx:(Math.random()-0.5)*3*SC,vy:Math.random()*3*SC,al:true,en:true,c:'#ff80ff'});
     }
   }
 }
@@ -248,13 +260,17 @@ function upd(){
     if(!e.al)return;e.an++;
     if(e.bo){e.x+=e.vx*SC;if(e.x<15||e.x>W-15)e.vx*=-1;}
     if(e.fa){e.x+=Math.sin(e.an*0.03)*0.8*SC;}
-    e.y+=e.sp*SC*0.7;
-    if(e.y>H+60)e.al=false;
+    if(e.zig){e.x+=Math.sin(e.an*e.zfreq)*e.zamp*SC*0.02;}
+    // Diagonal entry: move diagonally first, then straight down
+    if(e.dx){e.x+=e.dx*SC;if(e.x>15&&e.x<W-15)e.dx*=0.98;}
+    if(e.dy){e.y+=e.dy*SC*0.5;if(e.y>40*SC)e.dy=0;}
+    else e.y+=e.sp*SC*0.6;
+    if(e.y>H+60||e.x<-80||e.x>W+80)e.al=false;
     if(e.hf>0)e.hf--;
-    if(e.cf){e.cd=(e.cd||80);e.cd--;
-      if(e.cd<=0&&pl&&pl.al){e.cd=Math.max(20,80-stage*8);
+    if(e.cf){e.cd=(e.cd||90);e.cd--;
+      if(e.cd<=0&&pl&&pl.al){e.cd=Math.max(30,100-stage*8);
         var dx=pl.x-e.x,dy=pl.y-e.y,d=Math.sqrt(dx*dx+dy*dy)||1;
-        bls.push({x:e.x,y:e.y+8*SC,w:5,h:5,vx:dx/d*2*SC,vy:dy/d*2*SC,al:true,en:true,c:e.c});}}
+        bls.push({x:e.x,y:e.y+8*SC,w:5,h:5,vx:dx/d*1.5*SC,vy:dy/d*1.5*SC,al:true,en:true,c:e.c});}}
   });
   if(wvC&&!boss&&pl&&pl.al)sB(stage);
   if(boss)uB();
