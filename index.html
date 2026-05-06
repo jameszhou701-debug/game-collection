@@ -29,6 +29,7 @@
     --c-rhythm: #8b5cf6;
     --c-breakout: #06b6d4;
     --c-sudoku: #14b8a6;
+    --c-striker: #ff4080;;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -180,6 +181,9 @@
   .game-card[data-game="sudoku"] .icon { color: var(--c-sudoku); }
   .game-card[data-game="sudoku"]:active { background: rgba(20,184,166,0.08); }
 
+  .game-card[data-game="striker"] .icon { color: var(--c-striker); }
+  .game-card[data-game="striker"]:active { background: rgba(255,64,128,0.08); }
+
   /* Footer */
   footer {
     position: fixed;
@@ -299,6 +303,10 @@
   <a class="game-card" data-game="sudoku" href="games/sudoku.html">
     <span class="icon">🧮</span>
     <span class="name">数独</span>
+  </a>
+  <a class="game-card" data-game="striker" href="games/striker.html">
+    <span class="icon">🚀</span>
+    <span class="name">星际防线</span>
   </a>
 </div>
 
