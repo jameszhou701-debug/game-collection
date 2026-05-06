@@ -10,6 +10,7 @@ let animId=null;
 
 function resize(){
   const gw=document.getElementById('gameWrap');
+  if(!gw)return;
   const w=gw.clientWidth,hh=gw.clientHeight;
   W=Math.min(w,420);H=Math.min(hh,800);
   if(W/H<0.5)W=H*0.5;
