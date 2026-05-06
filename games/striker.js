@@ -43,33 +43,33 @@ function iS(){stars=[];for(var i=0;i<60;i++)stars.push({x:Math.random()*W,y:Math
 
 // ── Stage Data ──
 var STG=[
-{n:'ORBIT DEFENSE',b:'ORBIT SENTINEL',bp:'2147年→Xenon帝国突破欧星防线。\nJAX-20编队紧急升空。\n目标：摧毁前哨无人机群。\n"保持队形。菜鸟。"',bl:80,bsz:1.0,pts:120},
-{n:'MOON SHADOW',b:'LUNAR SPIDER',bp:'月球基地失联。\n已被改造成敌军工厂。\n到处都是自动炮塔。\n"为基地复仇。"',bl:140,bsz:1.3,pts:180},
-{n:'ASTEROID STORM',b:'NEST QUEEN',bp:'追击残敌进入小行星带。\n这里潜伏着生物机械寄生体。\n通讯中断，孤立无援。\n"只能靠自己了。"',bl:210,bsz:1.6,pts:240},
-{n:'STARGATE BATTLE',b:'GATE GUARDIAN',bp:'敌舰试图激活超空间星门。\n必须在充能完毕前摧毁它！\n敌方精锐尽出。\n"这是最后的屏障！为了地球！"',bl:300,bsz:2.0,pts:300},
-{n:'HEART OF DARKNESS',b:'OVERMIND CORE',bp:'穿越星门抵达Xenon母星。\n主宰核心就在前方。\n整个文明的黑暗意志。\n"为所有失去的人。最后一战。"',bl:450,bsz:2.5,pts:450},
+{n:'ORBIT DEFENSE',b:'ORBIT SENTINEL',bp:'2147年→Xenon帝国突破欧星防线。\nJAX-20编队紧急升空。\n目标：摧毁前哨无人机群。\n"保持队形。菜鸟。"',bl:80,bsz:1.0,pts:80},
+{n:'MOON SHADOW',b:'LUNAR SPIDER',bp:'月球基地失联。\n已被改造成敌军工厂。\n天空布满巡逻机和轰炸机。\n"为基地复仇。"',bl:150,bsz:1.3,pts:180},
+{n:'ASTEROID STORM',b:'NEST QUEEN',bp:'追击残敌进入小行星带。\n这里潜伏着生物机械寄生体。\n通讯中断，孤立无援。\n"只能靠自己了。"',bl:230,bsz:1.6,pts:300},
+{n:'STARGATE BATTLE',b:'GATE GUARDIAN',bp:'敌舰试图激活超空间星门。\n必须在充能完毕前摧毁它！\n敌方精锐尽出。\n"这是最后的屏障！为了地球！"',bl:350,bsz:2.0,pts:420},
+{n:'HEART OF DARKNESS',b:'OVERMIND CORE',bp:'穿越星门抵达Xenon母星。\n主宰核心就在前方。\n整个文明的黑暗意志。\n"为所有失去的人。最后一战。"',bl:550,bsz:2.5,pts:600},
 ];
 
 // ── Player ship ──
 function mkPl(){return{x:W/2,y:H*0.82,w:24,h:28,ft:0,fr:6,pw:0,wl:0,sh:0,inv:0,al:true,tx:null,ty:null};}
 
-// ── Enemy Types (8 types - drawn as actual aircraft) ──
-// t1: drone (V-shape), t2: scout (wide wing), t3: fighter (swept wing), t4: bomber (heavy),
-// t5: elite fighter, t6: turret (circle), t7: parasite (small circle), t8: dark entity
+// ── Enemy Types (9 types - fighters,UFOs,carrier) ──
+// t1:drone t2:scout t3:heavyFighter t4:bomber t5:elite t6:turret t7:parasite t8:UFO t9:carrier
 function se(t,x,y,dx,dy){
   if(!x)x=Math.random()*(W-70)+35;
   if(!y)y=-60;
   var sp=2+stage*0.2;
-  var e={x:x,y:y,w:18,h:14,hp:1,sp:sp,al:true,hf:0,t:t,an:0,wa:0};
+  var e={x:x,y:y,w:22,h:16,hp:1,sp:sp,al:true,hf:0,t:t,an:0,wa:0};
   e.dx=dx||0;e.dy=dy||sp;
-  if(t===1){e.hp=1;e.w=18;e.h=14;e.c='#60a0ff';}
-  else if(t===2){e.hp=2;e.w=22;e.h=18;e.c='#ff6b6b';e.cf=true;e.cd=Math.random()*50+80;}
-  else if(t===3){e.hp=3+stage;e.w=28;e.h=22;e.c='#ff8040';e.fa=true;e.cf=true;e.cd=Math.random()*30+60;}
-  else if(t===4){e.hp=5+stage*2;e.w=32;e.h=24;e.c='#a040ff';e.cf=true;e.cd=Math.random()*20+50;}
-  else if(t===5){e.hp=8+stage*3;e.w=40;e.h=30;e.c='#ff40a0';e.fa=true;e.cf=true;e.cd=Math.random()*15+35;}
-  else if(t===6){e.hp=2;e.w=14;e.h=20;e.c='#f0c060';e.bo=true;e.vx=(Math.random()-0.5)*1.5;}
-  else if(t===7){e.hp=1+stage;e.w=16;e.h=16;e.c='#60f0a0';e.bo=true;e.fa=true;e.vx=(Math.random()-0.5)*3;}
-  else if(t===8){e.hp=3;e.w=18;e.h=18;e.c='#c0a0ff';e.cf=true;e.bo=true;e.cd=Math.random()*20+35;e.vx=(Math.random()-0.5)*2;}
+  if(t===1){e.hp=1;e.w=22;e.h=16;e.c='#60a0ff';}
+  else if(t===2){e.hp=2+Math.floor(stage/3);e.w=26;e.h=20;e.c='#ff6b6b';e.cf=true;e.cd=Math.random()*40+80;}
+  else if(t===3){e.hp=3+stage;e.w=32;e.h=24;e.c='#ff8040';e.fa=true;e.cf=true;e.cd=Math.random()*25+60;}
+  else if(t===4){e.hp=5+stage*2;e.w=36;e.h=28;e.c='#a040ff';e.cf=true;e.cd=Math.random()*20+50;}
+  else if(t===5){e.hp=8+stage*3;e.w=44;e.h=34;e.c='#ff40a0';e.fa=true;e.cf=true;e.cd=Math.random()*15+35;}
+  else if(t===6){e.hp=2;e.w=16;e.h=22;e.c='#f0c060';e.bo=true;e.vx=(Math.random()-0.5)*1.5;}
+  else if(t===7){e.hp=1+stage;e.w=18;e.h=18;e.c='#60f0a0';e.bo=true;e.fa=true;e.vx=(Math.random()-0.5)*3;}
+  else if(t===8){e.hp=3+stage;e.w=24;e.h=20;e.c='#80ff80';e.fa=true;e.cf=true;e.cd=Math.random()*25+50;}
+  else if(t===9){e.hp=15+stage*5;e.w=60;e.h=40;e.c='#707080';e.heavy=true;e.sp=sp*0.25;e.cf=true;e.cd=Math.random()*10+20;}
   ems.push(e);
 }
 
@@ -120,11 +120,11 @@ function spawnZigzag(ty,count){
   }
 }
 
-// ── Spawn controller (60% fewer enemies, gentle ramp-up, varied flight paths) ──
+// ── Spawn controller (varied enemies + UFOs + carriers) ──
 function doSpawn(){
   if(wvC)return;
   spTimer++;
-  var rates=[40,35,28,22,18];
+  var rates=[38,30,24,20,16];
   var rate=rates[Math.min(stage-1,4)];
   if(spTimer>=rate){
     spTimer=0;
@@ -133,31 +133,36 @@ function doSpawn(){
       if(r<0.4)spawnLine(1,1+Math.floor(Math.random()*2));
       else if(r<0.7)spawnV(1,2);
       else if(r<0.9)spawnDiagonal(1,1+Math.floor(Math.random()*2),fr);
-      else spawnZigzag(1,2+Math.floor(Math.random()*2));
+      else spawnZigzag(1,2);
     }else if(stage===2){
-      if(r<0.3)spawnLine(1,2+Math.floor(Math.random()*2));
-      else if(r<0.55)spawnV(2,2+Math.floor(Math.random()*2));
-      else if(r<0.75)spawnDiagonal(2,1+Math.floor(Math.random()*2),fr);
-      else if(r<0.9)spawnSide(3,2,fr);
-      else spawnZigzag(2,2+Math.floor(Math.random()*2));
+      if(r<0.25)spawnLine(1,2+Math.floor(Math.random()*2));
+      else if(r<0.45)spawnV(2,2+Math.floor(Math.random()*2));
+      else if(r<0.65)spawnDiagonal(2,1+Math.floor(Math.random()*2),fr);
+      else if(r<0.80)spawnSide(3,2,fr);
+      else if(r<0.92)spawnZigzag(6,2);
+      else spawnV(8,1+Math.floor(Math.random()*2));
     }else if(stage===3){
-      if(r<0.25)spawnV(2,2+Math.floor(Math.random()*2));
-      else if(r<0.5)spawnWedge(3,2+Math.floor(Math.random()*2));
-      else if(r<0.7)spawnDiagonal(3,2+Math.floor(Math.random()*2),fr);
-      else if(r<0.85)spawnZigzag(4,2+Math.floor(Math.random()*2));
-      else spawnSide(4,2,fr);
+      if(r<0.2)spawnV(2,2+Math.floor(Math.random()*2));
+      else if(r<0.4)spawnWedge(3,2+Math.floor(Math.random()*2));
+      else if(r<0.55)spawnDiagonal(3,2+Math.floor(Math.random()*2),fr);
+      else if(r<0.7)spawnZigzag(4,2+Math.floor(Math.random()*2));
+      else if(r<0.85)spawnSide(6,2,fr);
+      else spawnV(8,2+Math.floor(Math.random()*2));
     }else if(stage===4){
-      if(r<0.25)spawnWedge(3,2+Math.floor(Math.random()*3));
-      else if(r<0.45)spawnV(4,2+Math.floor(Math.random()*2));
-      else if(r<0.65)spawnDiagonal(4,2+Math.floor(Math.random()*2),fr);
-      else if(r<0.85)spawnSide(5,2,fr);
-      else spawnZigzag(5,2+Math.floor(Math.random()*2));
+      if(r<0.18)spawnWedge(3,2+Math.floor(Math.random()*3));
+      else if(r<0.33)spawnV(4,2+Math.floor(Math.random()*2));
+      else if(r<0.5)spawnDiagonal(5,2+Math.floor(Math.random()*2),fr);
+      else if(r<0.65)spawnSide(6,2,fr);
+      else if(r<0.8)spawnZigzag(8,2+Math.floor(Math.random()*2));
+      else spawnV(8,2+Math.floor(Math.random()*3));
     }else{
-      if(r<0.2)spawnWedge(4,3+Math.floor(Math.random()*2));
-      else if(r<0.4)spawnV(5,2+Math.floor(Math.random()*2));
-      else if(r<0.55)spawnDiagonal(5,2+Math.floor(Math.random()*2),fr);
-      else if(r<0.75)spawnSide(6,2,fr);
-      else spawnZigzag(8,2+Math.floor(Math.random()*2));
+      if(r<0.15)spawnWedge(4,3+Math.floor(Math.random()*2));
+      else if(r<0.3)spawnV(5,2+Math.floor(Math.random()*2));
+      else if(r<0.45)spawnDiagonal(5,2+Math.floor(Math.random()*2),fr);
+      else if(r<0.6)spawnSide(6,2,fr);
+      else if(r<0.75)spawnZigzag(8,2+Math.floor(Math.random()*3));
+      else if(r<0.9)spawnV(8,2+Math.floor(Math.random()*3));
+      else spawnWedge(9,1);
     }
   }
   enKilled=Math.floor(score/10);
@@ -265,6 +270,7 @@ function upd(){
     if(e.dx){e.x+=e.dx*SC;if(e.x>15&&e.x<W-15)e.dx*=0.98;}
     if(e.dy){e.y+=e.dy*SC*0.5;if(e.y>40*SC)e.dy=0;}
     else e.y+=e.sp*SC*0.6;
+    if(e.heavy){if(e.y>H*0.15)e.y=H*0.15;e.x+=Math.sin(e.an*0.01)*0.5*SC;}
     if(e.y>H+60||e.x<-80||e.x>W+80)e.al=false;
     if(e.hf>0)e.hf--;
     if(e.cf){e.cd=(e.cd||90);e.cd--;
@@ -323,40 +329,85 @@ function upd(){
   bls=bls.filter(function(b){return b.al;});ems=ems.filter(function(e){return e.al;});pups=pups.filter(function(p){return p.al;});
 }
 
-// ── Draw: enemy aircraft ──
+// ── Draw: enemy aircraft (fighters, UFOs, carrier) ──
 function drEnemy(e){
   if(!e.al)return;
-  var x=e.x,y=e.y;
+  var x=e.x,y=e.y,s=SC;
   var bc=e.hf>0?'#fff':e.c;
-  var bl=e.hf>0?14:4;
+  var bl=e.hf>0?14:5;
   ctx.shadowColor=bc;ctx.shadowBlur=bl;
-  ctx.fillStyle=bc;
   if(e.t===1){
-    ctx.beginPath();ctx.moveTo(x,y-8*SC);ctx.lineTo(x+9*SC,y+6*SC);ctx.lineTo(x+5*SC,y+9*SC);
-    ctx.lineTo(x,y+2*SC);ctx.lineTo(x-5*SC,y+9*SC);ctx.lineTo(x-9*SC,y+6*SC);ctx.closePath();ctx.fill();
-    ctx.fillStyle='rgba(100,200,255,0.3)';ctx.beginPath();ctx.ellipse(x,y-2*SC,2*SC,3*SC,0,0,6.28);ctx.fill();
+    ctx.fillStyle=bc;ctx.beginPath();
+    ctx.moveTo(x,y-9*s);ctx.lineTo(x+4*s,y-6*s);ctx.lineTo(x+11*s,y+2*s);
+    ctx.lineTo(x+7*s,y+7*s);ctx.lineTo(x+2*s,y+2*s);ctx.lineTo(x-2*s,y+2*s);
+    ctx.lineTo(x-7*s,y+7*s);ctx.lineTo(x-11*s,y+2*s);ctx.lineTo(x-4*s,y-6*s);ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.ellipse(x,y-2*s,2.5*s,3*s,0,0,6.28);ctx.fill();
+    ctx.fillStyle='#000';ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(x,y-2*s,1*s,0,6.28);ctx.fill();ctx.globalAlpha=1;
   }else if(e.t===2){
-    ctx.beginPath();ctx.moveTo(x,y-10*SC);ctx.lineTo(x+12*SC,y+6*SC);ctx.lineTo(x+7*SC,y+10*SC);
-    ctx.lineTo(x+2*SC,y+2*SC);ctx.lineTo(x-2*SC,y+2*SC);ctx.lineTo(x-7*SC,y+10*SC);
-    ctx.lineTo(x-12*SC,y+6*SC);ctx.closePath();ctx.fill();
-    ctx.fillStyle='rgba(0,0,0,0.2)';ctx.beginPath();ctx.arc(x,y,2*SC,0,6.28);ctx.fill();
+    ctx.fillStyle=bc;ctx.beginPath();
+    ctx.moveTo(x,y-12*s);ctx.lineTo(x+3*s,y-8*s);
+    ctx.lineTo(x+14*s,y+3*s);ctx.lineTo(x+9*s,y+8*s);
+    ctx.lineTo(x+3*s,y+3*s);ctx.lineTo(x-3*s,y+3*s);
+    ctx.lineTo(x-9*s,y+8*s);ctx.lineTo(x-14*s,y+3*s);
+    ctx.lineTo(x-3*s,y-8*s);ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.2)';ctx.beginPath();ctx.ellipse(x,y-3*s,4*s,3*s,0,0,6.28);ctx.fill();
+    ctx.fillStyle='#000';ctx.globalAlpha=0.25;ctx.beginPath();ctx.arc(x,y-3*s,1.2*s,0,6.28);ctx.fill();ctx.globalAlpha=1;
   }else if(e.t===3){
-    ctx.beginPath();ctx.moveTo(x,y-12*SC);ctx.lineTo(x+15*SC,y+8*SC);ctx.lineTo(x+10*SC,y+13*SC);
-    ctx.lineTo(x+3*SC,y+4*SC);ctx.lineTo(x-3*SC,y+4*SC);ctx.lineTo(x-10*SC,y+13*SC);
-    ctx.lineTo(x-15*SC,y+8*SC);ctx.closePath();ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fillRect(x-1*SC,y-12*SC,2*SC,8*SC);
+    ctx.fillStyle=bc;ctx.beginPath();
+    ctx.moveTo(x,y-14*s);ctx.lineTo(x+5*s,y-9*s);
+    ctx.lineTo(x+17*s,y+4*s);ctx.lineTo(x+11*s,y+10*s);
+    ctx.lineTo(x+4*s,y+4*s);ctx.lineTo(x-4*s,y+4*s);
+    ctx.lineTo(x-11*s,y+10*s);ctx.lineTo(x-17*s,y+4*s);
+    ctx.lineTo(x-5*s,y-9*s);ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.15)';ctx.beginPath();ctx.ellipse(x,y-5*s,5*s,4*s,0,0,6.28);ctx.fill();
+    ctx.fillStyle='#000';ctx.globalAlpha=0.2;ctx.beginPath();ctx.arc(x,y-5*s,1.5*s,0,6.28);ctx.fill();ctx.globalAlpha=1;
+    ctx.fillStyle='rgba(255,255,255,0.25)';ctx.fillRect(x-1*s,y-14*s,2*s,5*s);
   }else if(e.t===4){
-    ctx.beginPath();ctx.moveTo(x,y-14*SC);ctx.lineTo(x+18*SC,y+10*SC);ctx.lineTo(x+12*SC,y+14*SC);
-    ctx.lineTo(x+3*SC,y+5*SC);ctx.lineTo(x-3*SC,y+5*SC);ctx.lineTo(x-12*SC,y+14*SC);
-    ctx.lineTo(x-18*SC,y+10*SC);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#000';ctx.globalAlpha=0.2;ctx.beginPath();ctx.arc(x,y,5*SC,0,6.28);ctx.fill();ctx.globalAlpha=1;
+    ctx.fillStyle=bc;ctx.beginPath();
+    ctx.moveTo(x,y-16*s);ctx.lineTo(x+5*s,y-8*s);
+    ctx.lineTo(x+20*s,y+5*s);ctx.lineTo(x+13*s,y+11*s);
+    ctx.lineTo(x+5*s,y+5*s);ctx.lineTo(x-5*s,y+5*s);
+    ctx.lineTo(x-13*s,y+11*s);ctx.lineTo(x-20*s,y+5*s);
+    ctx.lineTo(x-5*s,y-8*s);ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.12)';ctx.beginPath();ctx.ellipse(x,y-6*s,6*s,5*s,0,0,6.28);ctx.fill();
+    ctx.fillStyle='#000';ctx.globalAlpha=0.25;ctx.beginPath();ctx.arc(x,y-6*s,2*s,0,6.28);ctx.fill();ctx.globalAlpha=1;
   }else if(e.t===5){
-    ctx.beginPath();ctx.moveTo(x,y-16*SC);ctx.lineTo(x+22*SC,y+12*SC);ctx.lineTo(x+14*SC,y+17*SC);
-    ctx.lineTo(x+4*SC,y+6*SC);ctx.lineTo(x-4*SC,y+6*SC);ctx.lineTo(x-14*SC,y+17*SC);
-    ctx.lineTo(x-22*SC,y+12*SC);ctx.closePath();ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.18)';ctx.beginPath();ctx.arc(x,y-3*SC,6*SC,0,6.28);ctx.fill();
+    ctx.fillStyle=bc;ctx.beginPath();
+    ctx.moveTo(x,y-18*s);ctx.lineTo(x+6*s,y-10*s);
+    ctx.lineTo(x+24*s,y+6*s);ctx.lineTo(x+16*s,y+13*s);
+    ctx.lineTo(x+5*s,y+6*s);ctx.lineTo(x-5*s,y+6*s);
+    ctx.lineTo(x-16*s,y+13*s);ctx.lineTo(x-24*s,y+6*s);
+    ctx.lineTo(x-6*s,y-10*s);ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.12)';ctx.beginPath();ctx.ellipse(x,y-8*s,7*s,6*s,0,0,6.28);ctx.fill();
+    ctx.fillStyle='#000';ctx.globalAlpha=0.2;ctx.beginPath();ctx.arc(x,y-8*s,2.5*s,0,6.28);ctx.fill();ctx.globalAlpha=1;
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.fillRect(x-1.5*s,y-18*s,3*s,6*s);
+  }else if(e.t===6){
+    ctx.fillStyle=bc;ctx.beginPath();ctx.arc(x,y,8*s,0,6.28);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.25)';ctx.beginPath();ctx.arc(x,y,5*s,0,6.28);ctx.fill();
+    ctx.fillStyle='#000';ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(x,y,2.5*s,0,6.28);ctx.fill();ctx.globalAlpha=1;
+    ctx.fillStyle=bc;ctx.fillRect(x-1.5*s,y-14*s,3*s,8*s);
+  }else if(e.t===7){
+    ctx.fillStyle=bc;ctx.beginPath();ctx.ellipse(x,y,9*s,5*s,0,0,6.28);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.ellipse(x,y-2*s,5*s,3*s,0,0,6.28);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.beginPath();ctx.arc(x,y-4*s,2*s,0,6.28);ctx.fill();
+  }else if(e.t===8){
+    ctx.fillStyle=bc;ctx.beginPath();ctx.ellipse(x,y+2*s,12*s,4*s,0,0,6.28);ctx.fill();
+    ctx.fillStyle=bc;ctx.beginPath();ctx.ellipse(x,y-1*s,8*s,5*s,0,0,6.28);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.arc(x,y-5*s,4*s,0,6.28);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.15)';ctx.beginPath();ctx.arc(x,y-5*s,2*s,0,6.28);ctx.fill();
+    for(var i=0;i<4;i++){ctx.fillStyle='rgba(255,255,255,0.4)';ctx.beginPath();ctx.arc(x+Math.cos(i*1.57)*8*s,y+2*s,1.5*s,0,6.28);ctx.fill();}
+  }else if(e.t===9){
+    ctx.fillStyle=bc;
+    ctx.beginPath();ctx.moveTo(x-30*s,y-5*s);ctx.lineTo(x-20*s,y-18*s);ctx.lineTo(x-8*s,y-18*s);
+    ctx.lineTo(x,y-22*s);ctx.lineTo(x+8*s,y-18*s);ctx.lineTo(x+20*s,y-18*s);ctx.lineTo(x+30*s,y-5*s);
+    ctx.lineTo(x+28*s,y+2*s);ctx.lineTo(x+20*s,y+10*s);ctx.lineTo(x+5*s,y+12*s);
+    ctx.lineTo(x-5*s,y+12*s);ctx.lineTo(x-20*s,y+10*s);ctx.lineTo(x-28*s,y+2*s);ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.08)';ctx.beginPath();ctx.ellipse(x,y-8*s,15*s,8*s,0,0,6.28);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.08)';ctx.beginPath();ctx.rect(x-18*s,y-15*s,36*s,6*s);ctx.fill();
+    for(var i=0;i<3;i++){ctx.fillStyle='rgba(255,255,255,0.25)';ctx.beginPath();ctx.arc(x-15+i*15*s,y-12*s,2.5*s,0,6.28);ctx.fill();}
+    ctx.fillStyle='#000';ctx.globalAlpha=0.3;ctx.beginPath();ctx.arc(x,y+2*s,8*s,0,6.28);ctx.fill();ctx.globalAlpha=1;
   }else{
-    ctx.beginPath();ctx.arc(x,y,e.w/2,0,6.28);ctx.fill();
+    ctx.fillStyle=bc;ctx.beginPath();ctx.arc(x,y,e.w/2,0,6.28);ctx.fill();
     ctx.fillStyle='rgba(255,255,255,0.2)';ctx.beginPath();ctx.arc(x,y,e.w/3,0,6.28);ctx.fill();
   }
   ctx.shadowBlur=0;
