@@ -21,7 +21,7 @@ function sndMerge(type){ai();var b=330+type*60;pt(b,0.15,'sine',0.08);pt(b*1.25,
 function sndBump(f){if(Date.now()-sndLastBump<100)return;sndLastBump=Date.now();pt(80+f*30,0.06,'square',Math.min(0.04,f*0.01));}
 function sndGameOver(){pt(200,0.3,'sawtooth',0.1);pt(150,0.3,'sawtooth',0.08,0.2);pt(80,0.5,'sawtooth',0.06,0.4);}
 function sndNewBest(){var n=[523,659,784,1047,1319];for(var i=0;i<5;i++)pt(n[i],0.18,'sine',0.08,i*0.12);}
-function sndExplode(){for(var i=0;i<6;i++)pt(40+i*20,0.25,'sawtooth',0.06,i*0.05);pt(600,0.4,'square',0.15,0.1);pt(300,0.3,'square',0.1,0.2);}
+function sndExplode(){ai();for(var i=0;i<6;i++)pt(40+i*20,0.25,'sawtooth',0.06,i*0.05);pt(600,0.4,'square',0.15,0.1);pt(300,0.3,'square',0.1,0.2);}
 function sndDurian(){pt(90,0.2,'square',0.08,0);pt(110,0.2,'square',0.06,0.15);pt(70,0.3,'square',0.05,0.3);}
 
 // ── Leaderboard ──
@@ -169,15 +169,10 @@ function step(dt){
   if(gs!=='playing')return;
   var now=Date.now();
 
-  // Tick watermelon countdowns and lemon timers
+  // Tick lemon timers and durian mutation
   for(var j=0;j<bodies.length;j++){
     var b=bodies[j];
     if(!b.active||b.isHeld)continue;
-
-    // Watermelon countdown
-    if(b.type===WATERMELON&&b.explodeAt>0&&now>=b.explodeAt&&!b.isExploding){
-      explodeWatermelon(b);
-    }
 
     // Lemon -> durian after 30 seconds
     if(b.type===LEMON&&!b.merged&&now-b.spawnTime>30000&&!b.mutated){
@@ -211,6 +206,15 @@ function step(dt){
     }
   }
 
+  // Collect bodies to explode (do it after physics to avoid mid-loop mutation)
+  var toExplode=[];
+  for(var j=0;j<bodies.length;j++){
+    var b=bodies[j];
+    if(b.active&&!b.isHeld&&b.type===WATERMELON&&b.explodeAt>0&&now>=b.explodeAt&&!b.isExploding){
+      toExplode.push(b);
+    }
+  }
+
   for(var i=0;i<2;i++){
     for(var j=0;j<bodies.length;j++){
       var b=bodies[j];if(!b.active)continue;
@@ -223,9 +227,11 @@ function step(dt){
       b.vx*=b.damp;b.vy*=b.damp;b.justSpawned=false;
       if(!b.merged&&!b.justSpawned&&b.groundCount>3&&b.y<CH*0.12){endGame();return;}
     }
+    var blen0=bodies.length;
     for(var j=0;j<bodies.length;j++){
       for(var k=j+1;k<bodies.length;k++){
         var a=bodies[j],b2=bodies[k];
+        if(a.justSpawned||b2.justSpawned)continue;
         if(!a.active||!b2.active||a.isHeld||b2.isHeld)continue;
         var dx=b2.x-a.x,dy=b2.y-a.y,dist=Math.sqrt(dx*dx+dy*dy);
         var minDist=a.r+b2.r;
@@ -249,6 +255,12 @@ function step(dt){
         }
       }
     }
+  }
+  bodies=bodies.filter(function(b){return b.active;});
+
+  // Process explosions AFTER physics loop (safe to modify bodies here)
+  for(var ei=0;ei<toExplode.length;ei++){
+    if(toExplode[ei].active&&!toExplode[ei].isExploding)explodeWatermelon(toExplode[ei]);
   }
   bodies=bodies.filter(function(b){return b.active;});
 
