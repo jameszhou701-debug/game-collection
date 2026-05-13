@@ -104,14 +104,17 @@ function dropBody(){
 // ── Explosion ──
 function explodeWatermelon(wm){
   if(wm.isExploding||!wm.active)return;
+  console.log('💥 EXPLODE START',wm.x,wm.y,bodies.length);
   wm.isExploding=true;wm.active=false;
-  try{sndExplode();}catch(e){}
-  var blastR=wm.r*1.6; // only touching fruits
+  try{sndExplode();}catch(e){console.log('snd error',e);}
+  var blastR=wm.r*1.6;
+  console.log('blastR=',blastR);
   // Explosion particles
   for(var i=0;i<20;i++){
     var ang=Math.random()*Math.PI*2,sp=2+Math.random()*4;
     parts.push({x:wm.x,y:wm.y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,life:15+Math.random()*15,r:2+Math.random()*4,c:'#f97316'});
   }
+  console.log('particles done');
   // Destroy only touching fruits (not overlapping, just tangent)
   for(var i=0;i<bodies.length;i++){
     var b=bodies[i];
@@ -126,8 +129,10 @@ function explodeWatermelon(wm){
       score+=FRUITS[b.type].score;
     }
   }
+  console.log('destroy done');
   score+=50;
   updateScore();
+  console.log('💥 EXPLODE END');
 }
 
 // ── Durian infection ──
@@ -263,6 +268,7 @@ function step(dt){
   bodies=bodies.filter(function(b){return b.active;});
 
   // Process explosions AFTER physics
+  console.log('toExplode count:',toExplode.length);
   for(var ei=0;ei<toExplode.length;ei++){
     var wb=toExplode[ei];
     var stillThere=false;
