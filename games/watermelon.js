@@ -75,7 +75,7 @@ function createBody(type,x,y,vx,vy,opts){
     active:true,merged:false,justSpawned:true,damp:0.98,restitution:0.3,groundCount:0,
     spawnTime:Date.now(),explodeAt:0,isExploding:false};
   if(type===WATERMELON){
-    b.explodeAt=Date.now()+3000;
+    b.explodeAt=Date.now()+9000;
   }
   bodies.push(b);return b;
 }
@@ -103,9 +103,9 @@ function dropBody(){
 
 // ── Explosion ──
 function explodeWatermelon(wm){
-  if(wm.isExploding)return;
+  if(wm.isExploding||!wm.active)return;
   wm.isExploding=true;wm.active=false;
-  sndExplode();
+  try{sndExplode();}catch(e){}
   var blastR=wm.r*3.5;
   // Explosion particles
   for(var i=0;i<30;i++){
@@ -172,7 +172,7 @@ function step(dt){
   // Tick lemon timers and durian mutation
   for(var j=0;j<bodies.length;j++){
     var b=bodies[j];
-    if(!b.active||b.isHeld)continue;
+    if(!b.active||b.isHeld||b.justSpawned)continue;
 
     // Lemon -> durian after 30 seconds
     if(b.type===LEMON&&!b.merged&&now-b.spawnTime>30000&&!b.mutated){
@@ -228,10 +228,10 @@ function step(dt){
       if(!b.merged&&!b.justSpawned&&b.groundCount>3&&b.y<CH*0.12){endGame();return;}
     }
     var blen0=bodies.length;
-    for(var j=0;j<bodies.length;j++){
-      for(var k=j+1;k<bodies.length;k++){
+    for(var j=0;j<blen0;j++){
+      for(var k=j+1;k<blen0;k++){
         var a=bodies[j],b2=bodies[k];
-        if(a.justSpawned||b2.justSpawned)continue;
+        if(!a.active||!b2.active)continue;
         if(!a.active||!b2.active||a.isHeld||b2.isHeld)continue;
         var dx=b2.x-a.x,dy=b2.y-a.y,dist=Math.sqrt(dx*dx+dy*dy);
         var minDist=a.r+b2.r;
@@ -247,10 +247,12 @@ function step(dt){
           if(a.type===b2.type&&!a.merged&&!b2.merged&&a.type!==DURIAN&&a.type<WATERMELON){
             a.merged=true;b2.merged=true;a.active=false;b2.active=false;
             var nt=a.type+1,mx=(a.x+b2.x)/2,my=(a.y+b2.y)/2;
-            var nb=createBody(nt,mx,my,0,-2);nb.justSpawned=false;
+            var nb=createBody(nt,mx,my,0,-2);
+            nb.justSpawned=true;
+            nb.spawnTime=Date.now();
             score+=FRUITS[nt].score;updateScore();
             spawnParts(mx,my,FRUITS[nt].color);
-            sndMerge(nt);
+            try{sndMerge(nt);}catch(e){}
           }
         }
       }
@@ -427,7 +429,10 @@ renderLB(loadLB(),-1);
 spawnDrop();
 var lastTime=0;
 function loop(t){
-  var dt=t-lastTime;lastTime=t;
-  step(dt);draw();requestAnimationFrame(loop);
+  try{
+    var dt=t-lastTime;lastTime=t;
+    step(dt);draw();
+  }catch(e){console.log('game loop error:',e);}
+  requestAnimationFrame(loop);
 }
 requestAnimationFrame(function(t){lastTime=t;loop(t);});
