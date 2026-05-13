@@ -106,32 +106,28 @@ function explodeWatermelon(wm){
   if(wm.isExploding||!wm.active)return;
   wm.isExploding=true;wm.active=false;
   try{sndExplode();}catch(e){}
-  var blastR=wm.r*3.5;
+  var blastR=wm.r*1.6; // only touching fruits
   // Explosion particles
-  for(var i=0;i<30;i++){
-    var ang=Math.random()*Math.PI*2,sp=3+Math.random()*6;
-    parts.push({x:wm.x,y:wm.y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,life:20+Math.random()*20,r:3+Math.random()*5,c:'#f97316'});
-    parts.push({x:wm.x,y:wm.y,vx:Math.cos(ang)*sp*0.7,vy:Math.sin(ang)*sp*0.7,life:15+Math.random()*25,r:2+Math.random()*4,c:'#ef4444'});
+  for(var i=0;i<20;i++){
+    var ang=Math.random()*Math.PI*2,sp=2+Math.random()*4;
+    parts.push({x:wm.x,y:wm.y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,life:15+Math.random()*15,r:2+Math.random()*4,c:'#f97316'});
   }
-  // Destroy nearby fruits
+  // Destroy only touching fruits (not overlapping, just tangent)
   for(var i=0;i<bodies.length;i++){
     var b=bodies[i];
     if(!b.active||b===wm||b.isHeld)continue;
     var dx=b.x-wm.x,dy=b.y-wm.y,dist=Math.sqrt(dx*dx+dy*dy);
-    if(dist<blastR+b.r){
+    if(dist<=wm.r+b.r+2){
       b.active=false;
-      // Small particles per destroyed fruit
-      for(var j=0;j<6;j++){
-        var a2=Math.random()*Math.PI*2,s2=1+Math.random()*3;
-        parts.push({x:b.x,y:b.y,vx:Math.cos(a2)*s2,vy:Math.sin(a2)*s2,life:10+Math.random()*15,r:2+Math.random()*3,c:FRUITS[b.type].color});
+      for(var j=0;j<4;j++){
+        var a2=Math.random()*Math.PI*2,s2=1+Math.random()*2;
+        parts.push({x:b.x,y:b.y,vx:Math.cos(a2)*s2,vy:Math.sin(a2)*s2,life:8+Math.random()*10,r:2+Math.random()*3,c:FRUITS[b.type].color});
       }
       score+=FRUITS[b.type].score;
     }
   }
-  score+=50; // bonus for the watermelon itself
+  score+=50;
   updateScore();
-  // Remove countdown for this watermelon
-  countdowns=countdowns.filter(function(cd){return cd.body!==wm;});
 }
 
 // ── Durian infection ──
@@ -206,7 +202,7 @@ function step(dt){
     }
   }
 
-  // Collect bodies to explode (do it after physics to avoid mid-loop mutation)
+  // Collect bodies to explode BEFORE physics
   var toExplode=[];
   for(var j=0;j<bodies.length;j++){
     var b=bodies[j];
@@ -215,23 +211,28 @@ function step(dt){
     }
   }
 
+  // Physics: 2 sub-steps
+  var newBodies=[];
   for(var i=0;i<2;i++){
+    // Movement
     for(var j=0;j<bodies.length;j++){
       var b=bodies[j];if(!b.active)continue;
       if(b.isHeld){b.x=lerp(b.x,dragX,0.25);b.y=-50;continue;}
       b.vy+=0.55;b.x+=b.vx;b.y+=b.vy;
-      if(b.x-b.r<0){b.x=b.r;b.vx*= -0.3;sndBump(0.5);}
-      if(b.x+b.r>CW){b.x=CW-b.r;b.vx*= -0.3;sndBump(0.5);}
-      if(b.y+b.r>CH){b.y=CH-b.r;b.vy*= -0.15;b.vx*=0.9;b.groundCount++;sndBump(0.8);}
+      if(b.x-b.r<0){b.x=b.r;b.vx*= -0.3;}
+      if(b.x+b.r>CW){b.x=CW-b.r;b.vx*= -0.3;}
+      if(b.y+b.r>CH){b.y=CH-b.r;b.vy*= -0.15;b.vx*=0.9;b.groundCount++;try{sndBump(0.4);}catch(e){};}
       if(b.y-b.r<0&&!b.isHeld){b.y=b.r;b.vy=Math.abs(b.vy)*0.2;}
-      b.vx*=b.damp;b.vy*=b.damp;b.justSpawned=false;
-      if(!b.merged&&!b.justSpawned&&b.groundCount>3&&b.y<CH*0.12){endGame();return;}
+      b.vx*=b.damp;b.vy*=b.damp;
+      if(i===1)b.justSpawned=false;
+      // Game over check (only after sub-step 2)
+      if(i===1&&!b.merged&&!b.justSpawned&&b.groundCount>3&&b.y<CH*0.12){endGame();return;}
     }
-    var blen0=bodies.length;
-    for(var j=0;j<blen0;j++){
-      for(var k=j+1;k<blen0;k++){
+    // Collision detection (fixed bounds, no re-entry for new bodies)
+    var blen=bodies.length;
+    for(var j=0;j<blen;j++){
+      for(var k=j+1;k<blen;k++){
         var a=bodies[j],b2=bodies[k];
-        if(!a.active||!b2.active)continue;
         if(!a.active||!b2.active||a.isHeld||b2.isHeld)continue;
         var dx=b2.x-a.x,dy=b2.y-a.y,dist=Math.sqrt(dx*dx+dy*dy);
         var minDist=a.r+b2.r;
@@ -241,15 +242,13 @@ function step(dt){
           b2.x+=nx*overlap*0.5;b2.y+=ny*overlap*0.5;
           var relVn=(b2.vx-a.vx)*nx+(b2.vy-a.vy)*ny;
           if(relVn<0){var imp=relVn*0.7;a.vx+=imp*nx*0.5;a.vy+=imp*ny*0.5;b2.vx-=imp*nx*0.5;b2.vy-=imp*ny*0.5;}
-          var impactF=Math.abs(relVn);
-          if(impactF>2&&!a.merged&&!b2.merged)sndBump(Math.min(1,impactF/8));
-          // Merge: same type AND not durian AND not watermelon
           if(a.type===b2.type&&!a.merged&&!b2.merged&&a.type!==DURIAN&&a.type<WATERMELON){
             a.merged=true;b2.merged=true;a.active=false;b2.active=false;
             var nt=a.type+1,mx=(a.x+b2.x)/2,my=(a.y+b2.y)/2;
             var nb=createBody(nt,mx,my,0,-2);
             nb.justSpawned=true;
             nb.spawnTime=Date.now();
+            newBodies.push(nb);
             score+=FRUITS[nt].score;updateScore();
             spawnParts(mx,my,FRUITS[nt].color);
             try{sndMerge(nt);}catch(e){}
@@ -258,11 +257,17 @@ function step(dt){
       }
     }
   }
+  // Merge new bodies from this frame
+  for(var ni=0;ni<newBodies.length;ni++)bodies.push(newBodies[ni]);
+
   bodies=bodies.filter(function(b){return b.active;});
 
-  // Process explosions AFTER physics loop (safe to modify bodies here)
+  // Process explosions AFTER physics
   for(var ei=0;ei<toExplode.length;ei++){
-    if(toExplode[ei].active&&!toExplode[ei].isExploding)explodeWatermelon(toExplode[ei]);
+    var wb=toExplode[ei];
+    var stillThere=false;
+    for(var bi=0;bi<bodies.length;bi++){if(bodies[bi]===wb){stillThere=true;break;}}
+    if(stillThere&&wb.active&&!wb.isExploding)explodeWatermelon(wb);
   }
   bodies=bodies.filter(function(b){return b.active;});
 
