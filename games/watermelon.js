@@ -64,7 +64,7 @@ function resize(){
   CW=w;CH=Math.round(w/0.55);
   canvas.width=CW;canvas.height=CH;
 }
-resize();window.addEventListener('resize',resize);
+resize();window.addEventListener('resize',function(){resize();buildCache();});
 
 function lerp(a,b,t){return a+(b-a)*t;}
 
@@ -104,35 +104,27 @@ function dropBody(){
 // ── Explosion ──
 function explodeWatermelon(wm){
   if(wm.isExploding||!wm.active)return;
-  console.log('💥 EXPLODE START',wm.x,wm.y,bodies.length);
   wm.isExploding=true;wm.active=false;
-  try{sndExplode();}catch(e){console.log('snd error',e);}
+  try{sndExplode();}catch(e){}
   var blastR=wm.r*1.6;
   console.log('blastR=',blastR);
-  // Explosion particles
-  for(var i=0;i<20;i++){
-    var ang=Math.random()*Math.PI*2,sp=2+Math.random()*4;
-    parts.push({x:wm.x,y:wm.y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,life:15+Math.random()*15,r:2+Math.random()*4,c:'#f97316'});
+  // Explosion particles (reduced for mobile)
+  for(var i=0;i<12;i++){
+    var ang=Math.random()*Math.PI*2,sp=2+Math.random()*3;
+    parts.push({x:wm.x,y:wm.y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,life:12+Math.random()*10,r:3+Math.random()*4,c:'#f97316'});
   }
-  console.log('particles done');
-  // Destroy only touching fruits (not overlapping, just tangent)
+  // Destroy only touching fruits
   for(var i=0;i<bodies.length;i++){
     var b=bodies[i];
     if(!b.active||b===wm||b.isHeld)continue;
     var dx=b.x-wm.x,dy=b.y-wm.y,dist=Math.sqrt(dx*dx+dy*dy);
     if(dist<=wm.r+b.r+2){
       b.active=false;
-      for(var j=0;j<4;j++){
-        var a2=Math.random()*Math.PI*2,s2=1+Math.random()*2;
-        parts.push({x:b.x,y:b.y,vx:Math.cos(a2)*s2,vy:Math.sin(a2)*s2,life:8+Math.random()*10,r:2+Math.random()*3,c:FRUITS[b.type].color});
-      }
       score+=FRUITS[b.type].score;
     }
   }
-  console.log('destroy done');
   score+=50;
   updateScore();
-  console.log('💥 EXPLODE END');
 }
 
 // ── Durian infection ──
@@ -268,7 +260,6 @@ function step(dt){
   bodies=bodies.filter(function(b){return b.active;});
 
   // Process explosions AFTER physics
-  console.log('toExplode count:',toExplode.length);
   for(var ei=0;ei<toExplode.length;ei++){
     var wb=toExplode[ei];
     var stillThere=false;
@@ -291,9 +282,9 @@ function step(dt){
 
 var parts=[];
 function spawnParts(x,y,color){
-  for(var i=0;i<10;i++){
-    var a=Math.random()*Math.PI*2,sp=Math.random()*4+2;
-    parts.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:18+Math.random()*12,r:2+Math.random()*3,c:color});
+  for(var i=0;i<6;i++){
+    var a=Math.random()*Math.PI*2,sp=Math.random()*3+1;
+    parts.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:10+Math.random()*10,r:2+Math.random()*3,c:color});
   }
 }
 
@@ -316,94 +307,104 @@ function restart(){
 }
 
 // ── Render ──
+// Pre-render fruit sprites to offscreen canvases (cache)
+var fruitCache=[];
+function buildCache(){
+  for(var t=0;t<FRUITS.length;t++){
+    var f=FRUITS[t],r=f.r*(CW/420),size=Math.ceil(r*2)+8;
+    var oc=document.createElement('canvas');oc.width=oc.height=size;
+    var ocx=oc.getContext('2d'),cx=size/2,cy=size/2;
+    // Shadow
+    ocx.fillStyle='rgba(0,0,0,0.15)';ocx.beginPath();ocx.arc(cx+1,cy+1,r,0,Math.PI*2);ocx.fill();
+    // Body - flat color with simple highlight (no gradient)
+    ocx.fillStyle=f.color;ocx.beginPath();ocx.arc(cx,cy,r,0,Math.PI*2);ocx.fill();
+    // Simple highlight arc (top-left)
+    ocx.fillStyle='rgba(255,255,255,0.18)';ocx.beginPath();ocx.arc(cx-r*0.25,cy-r*0.2,r*0.45,0,Math.PI*2);ocx.fill();
+    // Outline
+    ocx.strokeStyle='rgba(255,255,255,0.15)';ocx.lineWidth=1.2;ocx.beginPath();ocx.arc(cx,cy,r,0,Math.PI*2);ocx.stroke();
+    // Emoji
+    var fs=Math.round(r*1.1);
+    ocx.font='bold '+fs+'px -apple-system,sans-serif';
+    ocx.textAlign='center';ocx.textBaseline='middle';
+    ocx.fillStyle='#fff';
+    ocx.shadowColor='rgba(0,0,0,0.3)';ocx.shadowBlur=1;
+    ocx.fillText(f.emoji,cx,cy+1);ocx.shadowBlur=0;
+    fruitCache[t]=oc;
+  }
+}
+buildCache();
+window.addEventListener('resize',function(){buildCache();resize();});
 function draw(){
   ctx.clearRect(0,0,CW,CH);
   ctx.fillStyle='#0f0f1a';ctx.fillRect(0,0,CW,CH);
-  ctx.strokeStyle='rgba(255,255,255,0.015)';ctx.lineWidth=0.5;
-  for(var i=0;i<CW;i+=30){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,CH);ctx.stroke();}
-  for(var i=0;i<CH;i+=30){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(CW,i);ctx.stroke();}
+
+  // Danger zone (no grid lines - save draw calls)
   var dlY=CH*0.15;
   ctx.fillStyle='rgba(239,68,68,0.03)';ctx.fillRect(0,0,CW,dlY);
-  ctx.strokeStyle='rgba(239,68,68,0.18)';ctx.lineWidth=1;
+  ctx.strokeStyle='rgba(239,68,68,0.12)';ctx.lineWidth=1;
   ctx.setLineDash([6,10]);ctx.beginPath();ctx.moveTo(0,dlY);ctx.lineTo(CW,dlY);ctx.stroke();ctx.setLineDash([]);
 
+  // Draw all fruits using pre-rendered sprites
   for(var i=0;i<bodies.length;i++){
     var b=bodies[i];if(!b.active)continue;
-    var f=FRUITS[b.type],r=b.r;
+    var fc=fruitCache[b.type];if(!fc)continue;
+    var r=b.r;
 
     // Durian glow
     if(b.type===DURIAN){
       var pulse=0.5+0.5*Math.sin(Date.now()*0.005);
-      ctx.fillStyle='rgba(139,92,246,'+(0.1+pulse*0.15)+')';
+      ctx.fillStyle='rgba(139,92,246,'+(0.08+pulse*0.1)+')';
       ctx.beginPath();ctx.arc(b.x,b.y,r+4,0,Math.PI*2);ctx.fill();
     }
 
-    // Watermelon shake when about to explode
+    // Shake for about-to-explode watermelon
     var sx=0,sy=0;
     if(b.type===WATERMELON&&b.explodeAt>0&&!b.isExploding&&b.explodeAt-Date.now()<1000){
       sx=(Math.random()-0.5)*3;sy=(Math.random()-0.5)*3;
     }
 
-    ctx.fillStyle='rgba(0,0,0,0.15)';ctx.beginPath();ctx.arc(b.x+sx+2,b.y+sy+2,r,0,Math.PI*2);ctx.fill();
-    var grad=ctx.createRadialGradient(b.x+sx-r*0.3,b.y+sy-r*0.3,r*0.1,b.x+sx,b.y+sy,r);
-    grad.addColorStop(0,'rgba(255,255,255,0.25)');
-    grad.addColorStop(0.5,f.color);grad.addColorStop(1,'rgba(0,0,0,0.2)');
-    ctx.fillStyle=grad;ctx.beginPath();ctx.arc(b.x+sx,b.y+sy,r,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle=b.type===DURIAN?'rgba(139,92,246,0.5)':'rgba(255,255,255,0.12)';
-    ctx.lineWidth=b.type===DURIAN?2:1.2;
-    ctx.beginPath();ctx.arc(b.x+sx,b.y+sy,r,0,Math.PI*2);ctx.stroke();
+    // Scale the cached sprite to match current body size
+    var scale=b.r/(FRUITS[b.type].r*(CW/420));
+    var sw=fc.width*scale,sh=fc.height*scale;
+    ctx.drawImage(fc,b.x+sx-sw/2,b.y+sy-sh/2,sw,sh);
 
-    // Emoji
-    var fs=Math.round(r*1.2);
-    ctx.font='bold '+fs+'px -apple-system,sans-serif';
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';
-    ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=b.type===DURIAN?6:2;
-    ctx.fillText(f.emoji,b.x+sx,b.y+sy+1);ctx.shadowBlur=0;
-
-    // Lemon timer indicator (small dot under it)
+    // Lemon timer dot
     if(b.type===LEMON&&!b.merged&&!b.mutated){
-      var age=Date.now()-b.spawnTime;
-      var pct=Math.min(1,age/30000);
-      var dotR=3;
-      ctx.fillStyle='rgba(255,255,255,0.3)';
-      ctx.beginPath();ctx.arc(b.x,b.y+r-dotR-1,dotR*(1-pct),0,Math.PI*2);ctx.fill();
+      var age=Date.now()-b.spawnTime,pct=Math.min(1,age/30000);
+      ctx.fillStyle='rgba(255,255,255,0.25)';ctx.beginPath();
+      ctx.arc(b.x,b.y+r-2,2*(1-pct),0,Math.PI*2);ctx.fill();
     }
   }
 
   // Held fruit
   if(curBody&&curBody.isHeld&&dropReady){
-    var f=FRUITS[curBody.type],r=curBody.r,x=curBody.x,y=curBody.y;
-    if(y<r)y=r;y=Math.max(-20,y);
-    ctx.globalAlpha=0.85;
-    var g2=ctx.createRadialGradient(x-r*0.3,y-r*0.3,r*0.1,x,y,r);
-    g2.addColorStop(0,'rgba(255,255,255,0.3)');g2.addColorStop(0.5,f.color);g2.addColorStop(1,'rgba(0,0,0,0.2)');
-    ctx.fillStyle=g2;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
-    ctx.font='bold '+Math.round(r*1.2)+'px -apple-system,sans-serif';
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';
-    ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=3;ctx.fillText(f.emoji,x,y+1);ctx.shadowBlur=0;
-    ctx.globalAlpha=1;
+    var fc2=fruitCache[curBody.type];if(fc2){
+      var x=curBody.x,y=Math.max(-20,Math.max(curBody.r,curBody.y));
+      var r2=curBody.r,scale2=r2/(FRUITS[curBody.type].r*(CW/420));
+      ctx.globalAlpha=0.9;
+      ctx.drawImage(fc2,x-fc2.width*scale2/2,y-fc2.height*scale2/2,fc2.width*scale2,fc2.height*scale2);
+      ctx.globalAlpha=1;
+    }
+    // Drop guide line
     ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=0.5;
-    ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,CH);ctx.stroke();ctx.setLineDash([]);
+    ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(curBody.x,0);ctx.lineTo(curBody.x,CH);ctx.stroke();ctx.setLineDash([]);
   }
 
-  // Countdown text on watermelons
+  // Countdown text
   for(var i=0;i<countdowns.length;i++){
-    var cd=countdowns[i];
-    var urgency=cd.text<=1;
-    ctx.font='bold '+(urgency?16:13)+'px -apple-system,sans-serif';
+    var cd=countdowns[i],urg=cd.text<=1;
+    ctx.font='bold '+(urg?16:13)+'px -apple-system,sans-serif';
     ctx.textAlign='center';ctx.textBaseline='bottom';
-    ctx.fillStyle=urgency?'#ef4444':'#fff';
-    ctx.shadowColor=urgency?'rgba(239,68,68,0.8)':'rgba(0,0,0,0.6)';
-    ctx.shadowBlur=4;
-    ctx.fillText(cd.text,cd.x,cd.y);
-    ctx.shadowBlur=0;
+    ctx.fillStyle=urg?'#ef4444':'#fff';
+    ctx.shadowColor=urg?'rgba(239,68,68,0.6)':'rgba(0,0,0,0.4)';ctx.shadowBlur=2;
+    ctx.fillText(cd.text,cd.x,cd.y);ctx.shadowBlur=0;
   }
 
-  // Particles
+  // Particles (capped at 80 for performance)
+  if(parts.length>80)parts=parts.slice(-80);
   for(var i=0;i<parts.length;i++){
-    var p=parts[i];ctx.globalAlpha=p.life/30;ctx.fillStyle=p.c;
-    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+    var p=parts[i];ctx.globalAlpha=Math.min(0.7,p.life/30);ctx.fillStyle=p.c;
+    ctx.fillRect(p.x-p.r/2,p.y-p.r/2,p.r,p.r);
   }
   ctx.globalAlpha=1;
   parts=parts.filter(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.life--;return p.life>0;});
