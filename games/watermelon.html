@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>🍉 合成大西瓜</title>
+<title>合成大西瓜</title>
 <style>
 :root{--bg:#1a1a2e;--surface:rgba(255,255,255,0.04);--text:#e8e8f0;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -30,8 +30,6 @@ canvas{display:block;width:100%;height:100%;}
 .overlay-btn{padding:12px 36px;border-radius:24px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;font-weight:800;font-size:16px;border:none;cursor:pointer;transition:all 0.12s;}
 .overlay-btn:active{transform:scale(0.92);}
 .ctrl-hint{font-size:11px;opacity:0.25;padding:4px 0;flex-shrink:0;}
-.fruits-row{display:flex;gap:4px;padding:4px 0;flex-shrink:0;flex-wrap:wrap;justify-content:center;}
-.fruit-dot{font-size:16px;opacity:0.4;}
 .leaderboard{position:absolute;left:10px;top:16px;display:flex;flex-direction:column;gap:2px;z-index:5;}
 .lb-title{font-size:9px;opacity:0.3;font-weight:700;text-align:center;margin-bottom:2px;}
 .lb-row{display:flex;align-items:center;gap:3px;font-size:10px;font-weight:600;}
@@ -41,44 +39,26 @@ canvas{display:block;width:100%;height:100%;}
 .lb-row.highlight .lb-score{opacity:1;}
 .durian-pulse{animation:dpulse 0.6s ease-in-out infinite;}
 @keyframes dpulse{0%,100%{filter:drop-shadow(0 0 4px rgba(250,204,21,0.3));}50%{filter:drop-shadow(0 0 12px rgba(250,204,21,0.7));}}
-.wm-countdown-text{position:absolute;color:#fff;font-size:12px;font-weight:900;text-align:center;pointer-events:none;z-index:3;text-shadow:0 0 6px rgba(255,0,0,0.8);}
-
 </style>
 </head>
 <body>
 <div class="top-bar">
-  <a class="back-btn" href="../index.html">‹ 返回</a>
-  <div class="title"><span>🍉 合成大西瓜</span></div>
-  <div class="score-box">🏆 <span id="score">0</span></div>
+  <a class="back-btn" href="../index.html">返回</a>
+  <div class="title"><span>合成大西瓜</span></div>
+  <div class="score-box"><span id="score">0</span></div>
 </div>
 <div class="game-wrap" id="gameWrap">
   <canvas id="gc"></canvas>
-  <div class="next-preview"><span class="next-label">NEXT</span><span class="next-fruit" id="nextFruit">🍒</span></div>
-  <div class="leaderboard" id="leaderboard"><div class="lb-title">🏆 排行榜</div></div>
+  <div class="next-preview"><span class="next-label">NEXT</span><span class="next-fruit" id="nextFruit"></span></div>
+  <div class="leaderboard" id="leaderboard"><div class="lb-title">排行榜</div></div>
   <div class="overlay" id="overlay">
-    <div class="overlay-emoji">🍉</div>
+    <div class="overlay-emoji">GAME OVER</div>
     <div class="overlay-title">Game Over</div>
     <div class="overlay-score">得分: <span id="finalScore">0</span></div>
-    <button class="overlay-btn" id="restartBtn">🔄 再来一次</button>
+    <button class="overlay-btn" id="restartBtn">再来一次</button>
   </div>
 </div>
-<p class="ctrl-hint">👆 左右拖动选择位置 · 松手掉落</p>
-<div class="fruits-row" style="gap:3px;">
-  <s<script src="watermelon.js"></script>left)/r.width*CW;
-  if(!dropReady)spawnDrop();
-});
-canvas.addEventListener('mousemove',function(e){
-  if(!dropReady||!curBody)return;
-  var r=canvas.getBoundingClientRect();dragX=(e.clientX-r.left)/r.width*CW;
-});
-canvas.addEventListener('mouseup',function(e){dropBody();});
-restartBtn.addEventListener('click',function(e){e.stopPropagation();restart();});
-
-// ── Init ──
-renderLB(loadLB(),-1);
-spawnDrop();
-function loop(){step();draw();requestAnimationFrame(loop);}
-loop();
-</script>
+<p class="ctrl-hint">左右拖动选择位置 松手掉落</p>
+<script src="watermelon.js"></script>
 </body>
 </html>
