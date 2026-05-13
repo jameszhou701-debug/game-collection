@@ -106,22 +106,10 @@ function explodeWatermelon(wm){
   if(wm.isExploding||!wm.active)return;
   wm.isExploding=true;wm.active=false;
   try{sndExplode();}catch(e){}
-  var blastR=wm.r*1.6;
-  console.log('blastR=',blastR);
-  // Explosion particles (reduced for mobile)
-  for(var i=0;i<12;i++){
-    var ang=Math.random()*Math.PI*2,sp=2+Math.random()*3;
-    parts.push({x:wm.x,y:wm.y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,life:12+Math.random()*10,r:3+Math.random()*4,c:'#f97316'});
-  }
-  // Destroy only touching fruits
-  for(var i=0;i<bodies.length;i++){
-    var b=bodies[i];
-    if(!b.active||b===wm||b.isHeld)continue;
-    var dx=b.x-wm.x,dy=b.y-wm.y,dist=Math.sqrt(dx*dx+dy*dy);
-    if(dist<=wm.r+b.r+2){
-      b.active=false;
-      score+=FRUITS[b.type].score;
-    }
+  // Explosion particles only — no fruit destruction
+  for(var i=0;i<16;i++){
+    var ang=Math.random()*Math.PI*2,sp=2+Math.random()*4;
+    parts.push({x:wm.x,y:wm.y,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,life:15+Math.random()*12,r:3+Math.random()*6,c:'#f97316'});
   }
   score+=50;
   updateScore();
@@ -315,13 +303,14 @@ function buildCache(){
     var oc=document.createElement('canvas');oc.width=oc.height=size;
     var ocx=oc.getContext('2d'),cx=size/2,cy=size/2;
     // Shadow
-    ocx.fillStyle='rgba(0,0,0,0.15)';ocx.beginPath();ocx.arc(cx+1,cy+1,r,0,Math.PI*2);ocx.fill();
-    // Body - flat color with simple highlight (no gradient)
-    ocx.fillStyle=f.color;ocx.beginPath();ocx.arc(cx,cy,r,0,Math.PI*2);ocx.fill();
-    // Simple highlight arc (top-left)
-    ocx.fillStyle='rgba(255,255,255,0.18)';ocx.beginPath();ocx.arc(cx-r*0.25,cy-r*0.2,r*0.45,0,Math.PI*2);ocx.fill();
+    ocx.fillStyle='rgba(0,0,0,0.12)';ocx.beginPath();ocx.arc(cx+1,cy+1,r,0,Math.PI*2);ocx.fill();
+    // Glass body with radial gradient
+    var grad=ocx.createRadialGradient(cx-r*0.3,cy-r*0.3,r*0.1,cx,cy,r);
+    grad.addColorStop(0,'rgba(255,255,255,0.3)');
+    grad.addColorStop(0.4,f.color);grad.addColorStop(1,'rgba(0,0,0,0.15)');
+    ocx.fillStyle=grad;ocx.beginPath();ocx.arc(cx,cy,r,0,Math.PI*2);ocx.fill();
     // Outline
-    ocx.strokeStyle='rgba(255,255,255,0.15)';ocx.lineWidth=1.2;ocx.beginPath();ocx.arc(cx,cy,r,0,Math.PI*2);ocx.stroke();
+    ocx.strokeStyle='rgba(255,255,255,0.2)';ocx.lineWidth=1;ocx.beginPath();ocx.arc(cx,cy,r,0,Math.PI*2);ocx.stroke();
     // Emoji
     var fs=Math.round(r*1.1);
     ocx.font='bold '+fs+'px -apple-system,sans-serif';
@@ -333,7 +322,7 @@ function buildCache(){
   }
 }
 buildCache();
-window.addEventListener('resize',function(){buildCache();resize();});
+
 function draw(){
   ctx.clearRect(0,0,CW,CH);
   ctx.fillStyle='#0f0f1a';ctx.fillRect(0,0,CW,CH);
