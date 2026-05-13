@@ -7,9 +7,9 @@ var csD,csC=0,csDn=false,csT=0,stT=0;
 var wvC=false,spTimer=0,bossSpawned=false,enKilled=0,enLimit=0;
 
 function sz(){
-  W=Math.min(GW.clientWidth,420);H=Math.min(GW.clientHeight,800);
+  W=Math.min(GW.clientWidth,420);H=Math.min(GW.clientHeight,750);
   if(W/H<0.5)W=H*0.5;if(H/W>2.2)H=W*2.2;
-  C.width=W;C.height=H;SC=W/320;
+  C.width=W;C.height=H;SC=W/260;
 }
 sz();window.addEventListener('resize',sz);
 
@@ -130,17 +130,18 @@ function doSpawn(){
     spTimer=0;
     var r=Math.random(),fr=Math.random()<0.5;
     if(stage===1){
-      if(r<0.4)spawnLine(1,1+Math.floor(Math.random()*2));
-      else if(r<0.7)spawnV(1,2);
-      else if(r<0.9)spawnDiagonal(1,1+Math.floor(Math.random()*2),fr);
-      else spawnZigzag(1,2);
+      if(r<0.35)spawnLine(1,1+Math.floor(Math.random()*2));
+      else if(r<0.65)spawnV(1,2);
+      else if(r<0.85)spawnDiagonal(1,1+Math.floor(Math.random()*2),fr);
+      else if(r<0.96)spawnZigzag(1,2);
+      else spawnV(8,1);
     }else if(stage===2){
       if(r<0.25)spawnLine(1,2+Math.floor(Math.random()*2));
       else if(r<0.45)spawnV(2,2+Math.floor(Math.random()*2));
       else if(r<0.65)spawnDiagonal(2,1+Math.floor(Math.random()*2),fr);
       else if(r<0.80)spawnSide(3,2,fr);
-      else if(r<0.92)spawnZigzag(6,2);
-      else spawnV(8,1+Math.floor(Math.random()*2));
+      else if(r<0.85)spawnZigzag(6,2+Math.floor(Math.random()*1));
+      else spawnV(8,2+Math.floor(Math.random()*2));
     }else if(stage===3){
       if(r<0.2)spawnV(2,2+Math.floor(Math.random()*2));
       else if(r<0.4)spawnWedge(3,2+Math.floor(Math.random()*2));
@@ -161,8 +162,8 @@ function doSpawn(){
       else if(r<0.45)spawnDiagonal(5,2+Math.floor(Math.random()*2),fr);
       else if(r<0.6)spawnSide(6,2,fr);
       else if(r<0.75)spawnZigzag(8,2+Math.floor(Math.random()*3));
-      else if(r<0.9)spawnV(8,2+Math.floor(Math.random()*3));
-      else spawnWedge(9,1);
+      else if(r<0.85)spawnV(8,2+Math.floor(Math.random()*3));
+      else spawnWedge(9,1+Math.floor(Math.random()*1));
     }
   }
   enKilled=Math.floor(score/10);
